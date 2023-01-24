@@ -1,0 +1,612 @@
+import pandas as pd
+import numpy as np
+import os, sys, glob
+import humanize
+import re
+import xlrd
+
+import json
+import itertools
+#from urllib.request import urlopen
+#import requests, xmltodict
+import time, datetime
+import math
+from pprint import pprint
+import gc
+from tqdm import tqdm
+tqdm.pandas()
+import pickle
+
+import logging
+import zipfile
+import warnings
+import argparse
+
+from openpyxl import load_workbook
+from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.styles import colors
+from openpyxl.styles import Font, Color
+from openpyxl.utils import units
+from openpyxl.styles import Border, Side, PatternFill, GradientFill, Alignment
+
+from g import logger
+
+from manual_dictionaries import gt_cols_chunks, data_chunks, data_chunks_alter, data_chunks_alter_02
+from manual_dictionaries import cols_chunks_02, main_cols, dtypes_chunks_dicts, dtypes_chunks_after_dict
+from manual_dictionaries import err_msg_lst
+
+# from tk_test import check_functions_lst
+
+def find_rec_pd(df, srch_str, print_debug=False):
+    rec_num = None
+    for i, row in df.iterrows():
+        row_values_rejoin = [' '.join((' '.join(v.split())).split('\n')) for v in row.values if type(v)==str]
+        rejoin_col = ' '.join((' '.join(srch_str.split())).split('\n'))
+        if srch_str in row_values_rejoin:
+            if print_debug: print('found:', srch_str)
+            # print(i)
+            return i
+    if print_debug: print('not found:', srch_str)
+    return rec_num
+
+def find_col(srch_cols_lst : list, # list of list
+             cols_lst: np.ndarray,
+            print_debug = False):
+    if print_debug: 
+        pass
+        # print("srch_cols_lst", srch_cols_lst)
+        # print("row.values", cols_lst)
+    gt_col_nums, col_nums, col_names = [], [], [] #None, None, None
+    # row_values_rejoin = [' '.join((' '.join(v.split('\n'))).split(' ')).replace('Усредненая','Усредненная') # так только по оному пробелу происходит разделение
+    row_values_rejoin = [' '.join((' '.join(v.split('\n'))).split()).replace('Усредненая','Усредненная').strip() 
+                             if type(v)==str  else ''
+                                     for v in cols_lst ]
+    fl_found = False
+    for i, cols_l in  enumerate(srch_cols_lst):
+    # for i, srch_col in  enumerate(srch_cols_lst):
+        for srch_col in cols_l:
+            srch_col_rejoin = ' '.join((' '.join(srch_col.split())).split('\n')).strip()
+            if srch_col_rejoin in row_values_rejoin:
+                fl_found = True
+                # gt_col_num = i
+                # col_num = row_values_rejoin.index(srch_col_rejoin)
+                # col_name = cols_lst[col_num]
+                gt_col_nums.append(i)
+                col_nums.append(row_values_rejoin.index(srch_col_rejoin))
+                col_names.append(str(cols_lst[row_values_rejoin.index(srch_col_rejoin)]))
+                # return gt_col_num, col_name, col_num
+    if fl_found and print_debug: 
+        pass
+        # print("srch_cols_lst", srch_cols_lst)
+        # print("row.values", cols_lst)
+        # print(gt_col_nums, col_nums, col_names)
+    return gt_col_nums, col_nums, col_names 
+
+def find_rec_pd_by_col_names_02(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
+    row_num = None
+    fl_found = False
+    fl_incorrect_found = False
+    fl_all_cols_found = False
+    cols_found = []
+    cols_num_found = []
+    cols_found_incorrect = []
+    cols_num_found_incorrect = []
+    result_cols = []
+    
+    for i, row in df.iterrows():
+        # if i <24: continue
+        # if i >30: break
+        fl_found = False
+        # for j in range(3):
+        gt_col_nums, col_names, col_nums = find_col(srch_str_lst[main_cols[0]:main_cols[1]+1], row.values, print_debug)
+        # print(i, gt_col_num, col_name, col_num)
+        if len(gt_col_nums)>0: # is not None:
+            fl_found = True
+            if print_debug: print(i, gt_col_nums, col_names, col_nums)
+                # break
+        if fl_found:  # найдены оснвоыне колокни
+            # теперь ищем все сотальные колокни
+            gt_col_nums, col_nums, col_names = find_col(srch_str_lst, row.values, print_debug)
+            if len(gt_col_nums)>0: # is not None:
+                fl_found = True
+                row_num = i
+                if print_debug: print(row_num, gt_col_nums, col_names, col_nums)
+            # print(len(gt_col_nums), len(srch_str_lst))
+            if len(gt_col_nums)< len(srch_str_lst):
+                not_found_cols_nums = list(set(list(range(len(srch_str_lst)))) - set(gt_col_nums))
+                not_found_cols_names = [v[0] for v in np.array(srch_str_lst, dtype=object)[not_found_cols_nums]]
+                print(f"file: {file_name}, chunk: {chunk}, строка {i}: не найдены все названия колонок, а именно:", not_found_cols_nums,
+                     not_found_cols_names)
+                  # list(np.array(srch_str_lst)[:,0]).index(not_found_cols_nums))
+        
+            else:
+                return row_num, gt_col_nums, col_names, col_nums
+    return row_num, gt_col_nums, col_names, col_nums
+
+def test_extract_chunk_positions(file_name, df_tk, print_debug = False, print_debug_main = False):
+    chunk_positions = [[None, None, None], [None, None, None], [None, None, None]]
+    rec_num_0 = None
+    all_cols_found = True
+    for j in range(4):
+        if print_debug: 
+            print("chunk:", j)
+        rec_num_0 = find_rec_pd(df_tk, data_chunks[j], print_debug=print_debug)
+        if rec_num_0 is not None:
+            pass
+            if print_debug: print(rec_num_0)
+        else:
+            rec_num_0 = find_rec_pd(df_tk, data_chunks_alter[j], print_debug=print_debug)
+            if rec_num_0 is not None:
+                pass
+                if print_debug: print(rec_num_0)
+            else:
+                rec_num_0 = find_rec_pd(df_tk, data_chunks_alter_02[j], print_debug=print_debug)
+                if rec_num_0 is not None:
+                    pass
+                    if print_debug: print(rec_num_0)
+        if rec_num_0 is not None:
+            if j>0:
+                chunk_positions[j-1][1]= rec_num_0
+            
+        if j <3:
+            row_num, gt_col_nums, col_names, col_nums = \
+                find_rec_pd_by_col_names_02(file_name, df_tk, j, cols_chunks_02[j], main_cols[j], print_debug = print_debug)
+            if len (gt_col_nums) < len (cols_chunks_02[j]):
+                all_cols_found = False
+            if row_num is not None:
+                chunk_positions[j][0] = row_num+1
+                chunk_positions[j][2] = col_nums
+                if j>0 and chunk_positions[j-1][1] is None:
+                    chunk_positions[j-1][1] = row_num
+            if print_debug: print()
+            if print_debug: 
+                # print("chunk:", j)
+                print(row_num, gt_col_nums, col_names, col_nums)
+    return chunk_positions, all_cols_found   
+
+def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=False, print_debug_main=False):
+    df_chunks = [None, None, None]
+    for i, chunk_positions in enumerate(chunks_positions):
+        if print_debug_main: print(chunk_positions)
+        # if i ==0: continue # test
+        df_chunks[i] = pd.read_excel(os.path.join(path_tkbd_source, fn), sheet_name = sheet_name, 
+            skiprows = chunk_positions[0], nrows = chunk_positions[1] - chunk_positions[0], #-1,
+            # index_col = chunk_positions[2],
+            usecols = chunk_positions[2],
+            # header=None,
+            names = gt_cols_chunks[i][1:len(cols_chunks_02[i])+1],
+            dtype =  dtypes_chunks_dicts[i]
+        )
+        df_chunk = df_chunks[i]
+        next_col = list(df_chunk.columns)[list(df_chunk.columns).index('№ п/п')+1]
+        if print_debug: print("next_col:", next_col)
+        # Согласовано
+        df_chunk = df_chunk[~( ((df_chunk['№ п/п']=='nan') & \
+                    df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I ))\
+                  | df_chunk['№ п/п'].str.contains(r"Согласовано", regex=True, flags= re.I)\
+                  | df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I))] # ,case = False
+        df_chunk = df_chunk[~( (df_chunk['№ п/п'].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
+                    | df_chunk['№ п/п'].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I)\
+                    | df_chunk['№ п/п'].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I)\
+                    | df_chunk[next_col].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
+                    | df_chunk[next_col].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I) \
+                    | df_chunk[next_col].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I))) ]
+        df_chunk_columns = list(df_chunk.columns)
+        next_check_cols = df_chunk_columns[df_chunk_columns.index('№ п/п')+2:-1] # 'ФИО ГВС'
+        if print_debug_main: print(next_check_cols)
+        mask_check_cols_isnan = df_chunk[next_check_cols[0]].isnull()
+        for col in next_check_cols[1:]:
+            mask_check_cols_isnan = mask_check_cols_isnan & df_chunk[col].isnull()
+        df_chunk = df_chunk[~(mask_check_cols_isnan)]
+
+        df_chunks[i] = df_chunk
+        for k,v in dtypes_chunks_after_dict[i].items():
+            if print_debug: print(f"{k}->{v}")
+            df_chunks[i][k] = df_chunks[i][k].apply( lambda x: str(x).replace(',', '.'))
+            try:
+                df_chunks[i][k] = df_chunks[i][k].astype(v)
+            except Exception as err:
+                print("-->", k, err)
+        # df_chunks[i].reset_index()
+        # df_chunks[i].columns = gt_cols_chunks[i][1:len(cols_chunks_02[i])+1]
+        # display(df_chunks[i])
+        # df_chunks[i]['Наименование ТК'] = fn + '_' + sheet_name
+        # print(i, len(df_chunks[i].columns), df_chunks[i].columns)
+        # print(len (gt_cols_chunks[i][1:len(cols_chunks_02[i])+1]), gt_cols_chunks[1:len(cols_chunks_02[i])])
+    return df_chunks #[0], df_chunk[1], df_chunk[2]
+
+total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
+def save_to_excel(df_total, total_sheet_names, save_path, fn):
+    # fn = model + '.xlsx'
+    offset = datetime.timezone(datetime.timedelta(hours=3))
+    dt = datetime.datetime.now(offset)
+    str_date = dt.strftime("%Y_%m_%d_%H%M")
+    fn_date = fn.replace('.xlsx','')  + '_' + str_date + '.xlsx'
+    
+    # with pd.ExcelWriter(os.path.join(path_tkbd_processed, fn_date )) as writer:  
+    with pd.ExcelWriter(os.path.join(save_path, fn_date )) as writer:  
+        
+        for i, df in enumerate(df_total):
+            df.to_excel(writer, sheet_name = total_sheet_names[i], index=False)
+    return fn_date    
+
+def print_err_messages(rez_code_values, err_msg_lst):
+    for i, rez_code_sublst in enumerate(rez_code_values):
+        for j, rez_code in enumerate(rez_code_sublst):
+            if not rez_code:
+                # print(f"i: {i}, j: {j}")
+                print(err_msg_lst[i][j])
+def get_err_messages(rez_code_values, err_msg_lst):
+    err_messages_lst = []
+    for i, rez_code_sublst in enumerate(rez_code_values):
+        err_messages_lst.append([])
+        for j, rez_code in enumerate(rez_code_sublst):
+            # if not rez_code:
+            if rez_code==0:
+                # print(f"i: {i}, j: {j}")
+                err_messages_lst[i].append(err_msg_lst[i][j])
+    return err_messages_lst
+                
+    # def check_row(chunk_num, row_values, cols_num):
+    #     rez_code_row, rez_message = True, None
+    #     rez_code_values = []
+    #     for i, f_lst in enumerate(check_functions_lst[chunk_num]):
+    #         for j, f in enumerate(f_lst):
+    #             if j==0:
+    #                 if type(f) == tuple:
+    #                     # values_lst = [row_values[cols_num[v]] for v in f[1]]
+    #                     values_lst = [row_values[v] for v in f[1]]
+    #                     # print(values_lst)
+    #                     rez_code_values.append([f[0](values_lst)])
+    #                 # print(rez_code_values)
+    #                 else: #if type(f) == 'function':
+    #                     # print("row_values.shape:", row_values.shape)
+    #                     # rez_code_values.append([f(row_values[cols_num[i]])])
+    #                     rez_code_values.append([f(row_values[i])])
+                    
+    #             else: 
+    #                 if type(f) == tuple:
+    #                     # values_lst = [row_values[cols_num[v]] for v in f[1]]  
+    #                     values_lst = [row_values[v] for v in f[1]]
+    #                     # print(f[0], values_lst)
+    #                     # print(rez_code_values)
+    #                     rez_code_values[i].append(f[0](values_lst))
+    #                 else: #if type(f) == 'function':
+    #                     # rez_code_values[i].append(f(row_values[cols_num[i]]))
+    #                     rez_code_values[i].append(f(row_values[i]))
+                    
+    #     # if False in rez_code_values: rez_code_row =False
+    #     # print(rez_code_values)
+    #     flat_rez_code_values = [item for sublist in rez_code_values for item in sublist]
+    #     # print(flat_rez_code_values)
+    #     if False in flat_rez_code_values: rez_code_row =False 
+    #     if 0 in flat_rez_code_values: rez_code_row = False 
+        
+    #     return rez_code_row, rez_code_values, #rez_message
+
+
+    # def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
+    #         tk_profile, tk_code, tk_name, patient_model,
+    #         exit_at_not_all_cols = False,
+    #         print_debug = False, print_debug_main = True):
+        
+    #     head_cols = ['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента', 'Файл Excel', 'Название листа в файле Excel']
+    #     df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
+    #     j = 0
+    #     # chunks_positions = test_extract_chunk_positions(df_tk, j, print_debug = print_debug, print_debug_main = print_debug_main)
+    #     chunks_positions, all_cols_found = test_extract_chunk_positions(fn, df_tk, print_debug = print_debug, print_debug_main = print_debug_main)
+    #     chunks_positions_flat = [item for sublist in chunks_positions for item in sublist[:2]]
+    #     if print_debug_main: print("chunks_positions_flat:", chunks_positions_flat)
+        
+
+    #     if None in chunks_positions_flat or not all_cols_found: 
+    #         # if print_debug_main:
+    #         # print(f"{fn}, {sheet_name}: Error: didn't all chunks positions find")
+    #         logger.error(f"{fn}, {sheet_name}: Error: didn't find all chunks positions or all columns")
+    #         logger.info(f"chunks_positions_flat: {chunks_positions_flat}")
+    #         logger.info(f"all_cols_found: {all_cols_found}")
+    #         if exit_at_not_all_cols:
+    #             logger.info("Process finised")
+    #             sys.exit(2)
+    #         else:
+    #             return [None, None, None]
+    #     else: 
+
+    #         if print_debug_main: print("chunks_positions:", chunks_positions)
+    #         df_chunks  = read_chunks(data_source_dir, fn, sheet_name, chunks_positions, print_debug=print_debug)
+    #         for i, df_chunk in enumerate(df_chunks):
+    #             if print_debug_main: print("chunk:", i)
+    #             chunk_num = i
+    #             cols_num = chunks_positions[i][2]
+    #             err_msg_lst_flat = [item for sl in err_msg_lst[i] for item in sl]
+    #             # if i ==2: #continue
+    #             #     display(df_chunk.head(3))
+    #             for j, row in df_chunk.iterrows():
+    #                 # if chunk_num==2: print(j, "row:", row)
+    #                 rez_code_row, rez_code_values = check_row(i, row.values, cols_num)
+    #                 # cols_num не актуально, т.к. в chunk-е все уже попорядку
+                    
+    #                 # rez_code_values_np = np.array([np.array(sublst, dtype=int) for sublst in rez_code_values], dtype=list)
+    #                 # rez_code_values_np = np.array([sublst for sublst in rez_code_values], dtype=list)
+    #                 # rez_code_values_np = rez_code_values
+    #                 flat_rez_code_values = [r for sl in rez_code_values for r in sl]
+    #                 flat_rez_code_values_inv = [0 if v ==1 else 1 for v in flat_rez_code_values]
+    #                 # print(flat_rez_code_values)
+    #                 # rez_code_values_np = np.array(rez_code_values, dtype=list)
+    #                 # rez_code_values_np = np.array(flat_rez_code_values, dtype=int)
+    #                 # rez_code_values_np = flat_rez_code_values
+    #                 rez_code_values_np = np.array(rez_code_values, dtype=object)
+    #                 flat_rez_code_values_np = np.array(flat_rez_code_values_inv, dtype=object)
+    #                 # flat_rez_code_values_np_inv = [0 if v==1 else 1 for v in flat_rez_code_values ]
+
+    #                 err_messages = get_err_messages(rez_code_values, err_msg_lst[chunk_num])
+    #                 err_messages_np = [np.array(sl, dtype=object) for sl in err_messages]
+    #                 # df_chunk.loc[j, ['rez_code_row', 'rez_code_values']] = np.array([check_row(i, row.values, cols_num)], dtype = object)
+    #                 # df_chunk.loc[j, ['rez_code_row', 'rez_code_values' ]] = dict(zip(['rez_code_row','rez_code_values'],[rez_code_row, rez_code_values_np]))
+    #                 # df_chunk.loc[j, ['rez_code_row', 'rez_code_values', 'rez_code_values_flat' ]] = \
+    #                 # dict(zip(['rez_code_row','rez_code_values', 'rez_code_values_flat'],[rez_code_row, rez_code_values_np, flat_rez_code_values_np]))
+    #                 df_chunk.loc[j, ['rez_code_row', 'rez_code_values' ]] = \
+    #                 dict(zip(['rez_code_row','rez_code_values'],[rez_code_row, rez_code_values_np]))
+    #                 # print(err_msg_lst_flat)
+    #                 # print(flat_rez_code_values)
+
+    #                 df_chunk.loc[j, err_msg_lst_flat] = dict(zip(err_msg_lst_flat, flat_rez_code_values_inv))
+    #                 # df_chunk.loc[j, ['err_messages' ]] = dict(zip(['err_messages'],err_messages_np))
+    #                 # df_chunk.loc[j, 'err_messages' ] = np.array(err_messages_np, dtype=object)
+    #                 # df_chunk.loc[j, 'err_messages' ] = err_messages
+    #                 # df_chunk.loc[j, ['rez_code_row', 'rez_code_values', 'err_messages']] = \
+    #                 #         [rez_code_row, rez_code_values, err_messages]
+    #                 # df_chunk.loc[j, 'rez_code_row'] = rez_code_row
+    #                 # df_chunk.loc[j, 'rez_code_values'] = {'rez_code_values': rez_code_values_np}
+    #                 # df_chunk.loc[j, 'err_messages'] = err_messages
+    #                 # dict({'rez_code_row':rez_code_row, 'rez_code_values':rez_code_values, 'err_messages':err_messages})
+    #             # df_chunk[['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента']] = tk_profile, tk_code, tk_name, patient_model
+    #             df_chunk['Профиль'] = tk_profile
+    #             df_chunk['Код ТК'] = tk_code
+    #             df_chunk['Наименование ТК'] = tk_name
+    #             df_chunk['Модель пациента'] = patient_model
+    #             df_chunk['Файл Excel'] = fn
+    #             df_chunk['Название листа в файле Excel'] = sheet_name
+    #             df_chunk_columns = list(df_chunk.columns)
+    #             for col in head_cols:
+    #                 df_chunk_columns.remove(col)
+    #             df_chunks[i] = df_chunk[head_cols + df_chunk_columns]
+
+    #     # fn_save = save_to_excel(df_chunks, total_sheet_names, path_tkbd_processed, 'test_' + fn)
+    #     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
+    #     return df_chunks
+
+    # def run_check_by_desc(data_root_dir,fn_tk_desc, data_source_dir, data_processed_dir,
+    #                     print_debug = False, print_debug_main = True):
+    #     df_tk_description = pd.read_excel(os.path.join(data_root_dir, fn_tk_desc))
+    #     df_tk_description.head(2)
+
+    #     # for i, fn in enumerate(fn_lst[12:13]):
+    #     df_total = [None, None, None]
+    #     stat_tk = []
+    #     # for i, fn in enumerate(fn_lst[:]):
+    #     for i, row in tqdm(df_tk_description.iterrows(), total=df_tk_description.shape[0]):
+    #         # if not os.path.isfile(os.path.join(path_tkbd_source_alter, fn)) or '.xlsx' not in fn.lower(): 
+    #         #     continue
+    #         if 'Файл Excel' in df_tk_description.columns:
+    #             fn = row['Файл Excel']
+    #         else:
+    #             logger.error('В описнаии нет названий файлов')
+    #             sys.exit(2)
+    #         if 'Название листа в файле Excel' in df_tk_description.columns:
+    #             sheet_name = row['Название листа в файле Excel']
+    #         else:
+    #             logger.error('В описнаии нет названий листов Excel')
+    #             sys.exit(2)
+    #         if 'Код' in df_tk_description.columns:
+    #             tk_code = row['Код']
+    #         else: tk_code = None
+    #         if 'Профиль' in df_tk_description.columns:
+    #             tk_profile = row['Профиль']
+    #         else: tk_profile = None
+    #         if 'Наименование' in df_tk_description.columns:
+    #             tk_name = row['Наименование']
+    #         else: tk_name = None
+    #         if 'Модель пациента' in df_tk_description.columns:
+    #             patient_model = row['Модель пациента']
+    #         else: patient_model = None
+            
+            
+    #         if print_debug_main: 
+    #             print()
+    #             print(fn, sheet_name)
+    #         df_chunks = run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
+    #             tk_code, tk_profile, tk_name, patient_model,
+    #             print_debug = print_debug, print_debug_main = print_debug_main)
+            
+    #         if i == 0: 
+    #             df_total = df_chunks
+    #         else:
+    #             for ii, df_chunk in enumerate(df_chunks):
+    #                 df_total[ii] = pd.concat([df_total[ii], df_chunk])
+    #         # k += 1
+    #         stat_tk.append( [tk_profile, tk_code, tk_name, fn, sheet_name, 
+    #                 df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
+    #             # print()
+
+    #     if df_total[0] is not None: 
+    #         print(df_total[0].shape)
+    #         total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
+    #         # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
+    #         fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
+    #         # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
+    #         df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+    #         fm_stat_save = save_to_excel([df_stat_tk], 
+    #                     ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+    #     else: 
+    #         fn_save = None
+    #         fm_stat_save = None
+    #     logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+    #     logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    #     return fn_save, fm_stat_save
+
+    # def run_check_by_files(data_source_dir, data_processed_dir,
+    #                     print_debug = False, print_debug_main = True):
+    #     df_total = [None, None, None]
+    #     stat_tk = []
+    #     fn_lst = os.listdir(data_source_dir)
+    #     k = 0
+        
+    #     for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
+        
+    #         if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xlsx' not in fn.lower(): 
+    #             logger.info(f"file '{fn}' not found or not xlsx-file")
+    #             continue
+    #         tk_profile = None
+    #         tk_code = None
+    #         tk_name = None #re.sub(r"^\d+\.", '', fn.split(' +')[0].replace('.xlsx','')).strip()
+    #         patient_model = None
+    #         xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
+    #         xl_sheet_names = xl.sheet_names  # see all sheet names
+    #         print(fn, xl_sheet_names)
+    #         for sheet_name in xl_sheet_names:
+
+    #             df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
+
+    #             print(k, sheet_name)
+        
+    #             # logger.error('В описнаии нет названий листов Excel')
+    #             # sys.exit(2)
+            
+            
+    #             if print_debug_main: 
+    #                 print()
+    #                 print(fn, sheet_name)
+    #             df_chunks = run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
+    #                 tk_code, tk_profile, tk_name, patient_model,
+    #                 exit_at_not_all_cols=False,
+    #                 print_debug = print_debug, print_debug_main = print_debug_main)
+    #             if df_chunks[0] is None : continue
+                
+    #             if k == 0: 
+    #                 df_total = df_chunks
+    #             else:
+    #                 for ii, df_chunk in enumerate(df_chunks):
+    #                     df_total[ii] = pd.concat([df_total[ii], df_chunk])
+    #             k += 1
+    #             stat_tk.append( [tk_profile, tk_code, tk_name, fn, sheet_name, 
+    #                     df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
+    #                 # print()
+
+    #         if df_total[0] is not None: 
+    #             print(df_total[0].shape)
+    #             total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
+    #             # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
+    #             fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
+    #             # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
+    #             df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+    #             fm_stat_save = save_to_excel([df_stat_tk], 
+    #                         ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+    #         else: 
+    #             fn_save = None
+    #             fm_stat_save = None
+    #     logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+    #     logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    #     return fn_save, fm_stat_save    
+
+def conv_str_lst_2_int_lst(str_lst):
+    # print(str_lst)
+    str_lst_w = [l.replace('[','').replace(']','') for l in str_lst]
+    # print(str_lst_w)
+    str_lst_w = [l.split(',') for l in  str_lst_w]
+    # print(str_lst_w)
+    int_lst = [[int(i.strip()) for i in l]  for l in str_lst_w] 
+    return int_lst
+
+def transform_list_form_xlsx(s):
+    # print(s.split('list('))
+    lst = s.split('list')
+    # print(lst)
+    lst = [l.replace(']) ', '').replace('])', '').replace(']', '').replace('([', '').replace('\n', '') for l in lst]
+    lst = [l for l in lst if l != '[']
+    # print(lst)
+    return lst
+
+def add_check_comments(path_tkbd_processed, fn_save):
+    wb = load_workbook(os.path.join(path_tkbd_processed, fn_save))
+    cols_wdth_lst = [[5,20,70,10,15,15,10,10], [5,20,15,25,15,15,10,10], [5,70,15,15,15,15,10,10]]
+    desc_cols_num = 6
+    col_num_check_row_total_lst = [8+desc_cols_num, 8+desc_cols_num, 7+desc_cols_num]
+    col_num_check_row_codes_lst = [9+desc_cols_num, 9+desc_cols_num, 8+desc_cols_num]
+
+    print(wb.sheetnames)
+    for chunk_num, ws_title in enumerate(wb.sheetnames):
+        ws = wb[ws_title] #wb['Услуги']
+        # chunk_num = 0
+        # if chunk_num==2: continue
+
+        col_num_check_row_total = col_num_check_row_total_lst[chunk_num] #8
+        col_num_check_row_codes = col_num_check_row_codes_lst[chunk_num] #9
+
+        alignment=Alignment(horizontal='left', #'general',
+                             vertical= 'top', #'bottom',
+                             text_rotation=0,
+                             wrap_text=True,
+                             shrink_to_fit=False,
+                             indent=0)
+        cols_wdth = cols_wdth_lst[chunk_num] #[5,20,70,10,15,15,10,10]
+        ws.auto_filter.ref = "A1:X1"
+        for ir, row in enumerate(ws.values):
+            # print(ir) #, row)
+            # print(type(row[col_num_check_row_total]), row[col_num_check_row_total])
+            # if (row[col_num_check_row_total]=='FALSE') and (ir>0):
+            if ir==0:
+                for ic, _ in enumerate(row):
+                    cell = ws.cell(row=ir+1, column=ic+1 + desc_cols_num)
+                    cell.comment = None
+                    cell.alignment = alignment
+                    if ic < len(cols_wdth):
+                        ws.column_dimensions[cell.column_letter].width = cols_wdth[ic]
+                    else: ws.column_dimensions[cell.column_letter].width = 15
+
+            if (not row[col_num_check_row_total]) and (ir>0):
+                # for ic,value in enumerate(row):
+                #     print(ic, value)
+                # print(type(row[col_num_check_row_codes]), row[col_num_check_row_codes])
+                s = row[col_num_check_row_codes]
+                str_lst = transform_list_form_xlsx(s)
+                # print(str_lst)
+                rez_code_values = conv_str_lst_2_int_lst(str_lst)
+                # rez_code_values = conv_str_lst_2_int_lst(transform_list_form_xlsx(row[col_num_check_row_codes]))
+                # print(rez_code_values)
+                err_messages = get_err_messages(rez_code_values, err_msg_lst[chunk_num])
+                # print(err_messages)
+                for ic, err_msg_sl in enumerate(err_messages):
+                    # print('->len', len(err_msg_sl))
+                    comment = None
+                    # cell = None
+                    cell = ws.cell(row=ir+1, column=ic+1 + desc_cols_num)
+                    if len(err_msg_sl)>0:
+                        comment = Comment('\n'.join(err_msg_sl), "test")
+                        # print(f"ic: {ic}, ir: {ir}")
+                        # print(comment)
+                        comment.width = 300
+                        # comment.height = 50* len(err_msg_sl)
+                        comment.height = 100
+                        # ws["A1"].comment = comment
+                        # cell = ws.cell(row=ir+1, column=ic+1)
+                        # print(f"cell.coordinate: {cell.coordinate}")
+                        cell.comment = comment
+                        cell.fill = PatternFill('solid', fgColor="faf080")
+                        # ws.cell(row=ir+1, column=ic+1, comment= comment)
+                    else:
+                        cell.comment = None
+                        cell.fill = PatternFill('solid', fgColor="ffffff")
+            # else:
+
+
+
+            # if ir>20: break
+    offset = datetime.timezone(datetime.timedelta(hours=3))
+    dt = datetime.datetime.now(offset)
+    str_date = dt.strftime("%Y_%m_%d_%H%M")
+    fn_ch_com_save = 'tkbd_check_commented_' + str_date + '.xlsx'
+    wb.save(os.path.join(path_tkbd_processed, fn_ch_com_save))    
+    logger.info(f" file '{fn_ch_com_save}' save in '{path_tkbd_processed}'")
+    
