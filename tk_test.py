@@ -561,6 +561,8 @@ def add_check_comments(path_tkbd_processed, fn_save):
     print(wb.sheetnames)
     for chunk_num, ws_title in enumerate(wb.sheetnames):
         ws = wb[ws_title] #wb['Услуги']
+        # ws.delete_cols(col_num_check_row_total_lst[chunk_num], 40)
+        
         # chunk_num = 0
         # if chunk_num==2: continue
 
@@ -622,17 +624,16 @@ def add_check_comments(path_tkbd_processed, fn_save):
                         cell.comment = None
                         cell.fill = PatternFill('solid', fgColor="ffffff")
             # else:
-
-
-
             # if ir>20: break
+
+        ws.delete_cols(col_num_check_row_codes_lst[chunk_num]+1, 40)
+
     offset = datetime.timezone(datetime.timedelta(hours=3))
     dt = datetime.datetime.now(offset)
     str_date = dt.strftime("%Y_%m_%d_%H%M")
     fn_ch_com_save = 'tkbd_check_commented_' + str_date + '.xlsx'
     wb.save(os.path.join(path_tkbd_processed, fn_ch_com_save))    
     logger.info(f" file '{fn_ch_com_save}' save in '{path_tkbd_processed}'")
-
 
 def load_check_dictionaries(path_supp_dicts):
     global df_services_MGFOMS, df_services_804n, df_RM, df_MNN
@@ -669,13 +670,6 @@ def load_check_dictionaries(path_supp_dicts):
                inplace=True)
     print("df_MNN", df_MNN.shape, df_MNN.columns)
     return df_services_MGFOMS, df_services_804n, df_RM, df_MNN
-
-
-# def run_check_by_files(xlsx_source_dir, xlsx_processed_dir):
-#     pass
-
-# def run_check_by_desc(xlsx_source_dir, xlsx_processed_dir, data_root_dir, xlsx_description):
-#     pass
 
 
 def check_input_pars(data_source_dir, data_processed_dir, data_root_dir, xlsx_description, supp_dict_dir) :
