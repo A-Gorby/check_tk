@@ -405,11 +405,12 @@ def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
 
-def run_check_by_desc(data_root_dir,fn_tk_desc, data_source_dir, data_processed_dir,
+def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
     df_tk_description = pd.read_excel(os.path.join(data_root_dir, fn_tk_desc))
-    df_tk_description.head(2)
-
+    # df_tk_description.head(2)
+    head_cols = ['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента', 'Файл Excel', 'Название листа в файле Excel']
+    
     # for i, fn in enumerate(fn_lst[12:13]):
     df_total = [None, None, None]
     stat_tk = []
@@ -447,16 +448,19 @@ def run_check_by_desc(data_root_dir,fn_tk_desc, data_source_dir, data_processed_
         df_chunks = run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
             tk_code, tk_profile, tk_name, patient_model,
              print_debug = print_debug, print_debug_main = print_debug_main)
-        
+            
         if i == 0: 
             df_total = df_chunks
         else:
             for ii, df_chunk in enumerate(df_chunks):
                 df_total[ii] = pd.concat([df_total[ii], df_chunk])
         # k += 1
-        stat_tk.append( [tk_profile, tk_code, tk_name, fn, sheet_name, 
+        if df_chunks[0] is not None:
+            stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                  df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
-            # print()
+        else:
+            stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
+                 0, 0, 0])
 
     if df_total[0] is not None: 
         print(df_total[0].shape)
@@ -464,7 +468,8 @@ def run_check_by_desc(data_root_dir,fn_tk_desc, data_source_dir, data_processed_
         # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
         fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
         # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
-        df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+        # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+        df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
         fm_stat_save = save_to_excel([df_stat_tk], 
                       ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
     else: 
@@ -478,6 +483,8 @@ def run_check_by_files(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
     df_total = [None, None, None]
     stat_tk = []
+    head_cols = ['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента', 'Файл Excel', 'Название листа в файле Excel']
+    
     fn_lst = os.listdir(data_source_dir)
     k = 0
     
@@ -518,9 +525,12 @@ def run_check_by_files(data_source_dir, data_processed_dir,
                 for ii, df_chunk in enumerate(df_chunks):
                     df_total[ii] = pd.concat([df_total[ii], df_chunk])
             k += 1
-            stat_tk.append( [tk_profile, tk_code, tk_name, fn, sheet_name, 
+            if df_chunks[0] is not None:
+                stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                      df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
-                # print()
+            else:
+                stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
+                     0, 0, 0])
 
         if df_total[0] is not None: 
             print(df_total[0].shape)
@@ -528,7 +538,10 @@ def run_check_by_files(data_source_dir, data_processed_dir,
             # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
             fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
             # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
-            df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+            # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+            df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
+            
+    
             fm_stat_save = save_to_excel([df_stat_tk], 
                           ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
         else: 
@@ -536,7 +549,7 @@ def run_check_by_files(data_source_dir, data_processed_dir,
             fm_stat_save = None
     logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
     logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
-    return fn_save, fm_stat_save    
+    return fn_save, fm_stat_save
 
 def add_check_comments(path_tkbd_processed, fn_save):
     wb = load_workbook(os.path.join(path_tkbd_processed, fn_save))
