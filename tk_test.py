@@ -331,24 +331,26 @@ def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
     
 
     if None in chunks_positions_flat or not all_cols_found: 
-        # if print_debug_main:
+        if print_debug_main:
         # print(f"{fn}, {sheet_name}: Error: didn't all chunks positions find")
-        logger.error(f"File: {fn}")
-        logger.error(f"Sheet: {sheet_name}: Error: didn't find all chunks positions or all columns")
-        logger.info(f"chunks_positions_flat: {chunks_positions_flat}")
-        logger.info(f"all_cols_found: {all_cols_found}")
+            logger.error(f"File: {fn}")
+            logger.error(f"Sheet: {sheet_name}: Error: didn't find all chunks positions or all columns")
+            logger.info(f"chunks_positions_flat: {chunks_positions_flat}")
+            logger.info(f"all_cols_found: {all_cols_found}")
         if chunks_positions_flat[0] is None:
-            logger.info(f"Not found chunk: Услуги")
+            # logger.info(f"Not found chunk: Услуги")
+            logger.info(f"Не найден раздел: Услуги")
         if chunks_positions_flat[2] is None:
-            logger.info(f"Not found chunk: ЛП")
+            logger.info(f"Не найден раздел: ЛП")
         if chunks_positions_flat[4] is None:
-            logger.info(f"Not found chunk: МИ/РМ")
+            logger.info(f"Не найден раздел: МИ/РМ")
         
         if exit_at_not_all_cols:
-            logger.info("Process finised")
+            logger.info("Обработка завершена")
             sys.exit(2)
         else:
-            logger.info(f"Обработка данного листа Excel производиться не будет")
+            # logger.info(f"Файл '{fn}'")
+            logger.info(f"Обработка листа '{sheet_name}' производиться не будет")
             return [None, None, None]
     else: 
 
@@ -411,10 +413,13 @@ def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
             for col in head_cols:
                 df_chunk_columns.remove(col)
             df_chunks[i] = df_chunk[head_cols + df_chunk_columns]
+        
+        logger.info(f"Обработка листа '{sheet_name}' завершена")
 
     # fn_save = save_to_excel(df_chunks, total_sheet_names, path_tkbd_processed, 'test_' + fn)
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
+    
     
 
 def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed_dir,
@@ -454,9 +459,11 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         else: patient_model = None
         
         
-        if print_debug_main: 
-            print()
-            print(fn, sheet_name)
+        # if print_debug_main: 
+        #     print()
+        #     print(fn, sheet_name)
+        logger.info(f"Файл: '{fn}'")
+        logger.info(f"Лист: {str(sheet_name)}")
         df_chunks = run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
             tk_code, tk_profile, tk_name, patient_model,
              print_debug = print_debug, print_debug_main = print_debug_main)
@@ -487,8 +494,11 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
     else: 
         fn_save = None
         fm_stat_save = None
-    logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
-    logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+    # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    logger.info(f"Файл проверки '{fn_ch_com_save}' сохранен в '{data_processed_dir}'")
+    logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
+
     return fn_save, fm_stat_save
 
 
@@ -503,8 +513,9 @@ def run_check_by_files(data_source_dir, data_processed_dir,
     
     for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
     
-        if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xlsx' not in fn.lower(): 
-            logger.info(f"file '{fn}' not found or not xlsx-file")
+        if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xls' not in fn.lower(): 
+            # logger.info(f"file '{fn}' not found or not xlsx-file")
+            logger.info(f"Файл '{fn}' не найден или не xls-файл")
             continue
         tk_profile = None
         tk_code = None
@@ -512,12 +523,15 @@ def run_check_by_files(data_source_dir, data_processed_dir,
         patient_model = None
         xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
         xl_sheet_names = xl.sheet_names  # see all sheet names
-        print(fn, xl_sheet_names)
+        # print(fn, xl_sheet_names)
+        logger.info(f"Файл: '{fn}'")
+        logger.info(f"Лист: {str(xl_sheet_names)}")
         for sheet_name in xl_sheet_names:
 
             df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
 
-            print(k, sheet_name)
+            # print(k, sheet_name)
+            logger.info(f"{k}: {sheet_name}")
     
             # logger.error('В описнаии нет названий листов Excel')
             # sys.exit(2)
@@ -560,8 +574,11 @@ def run_check_by_files(data_source_dir, data_processed_dir,
         else: 
             fn_save = None
             fm_stat_save = None
-    logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
-    logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+    # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    logger.info(f"Файл проверки '{fn_ch_com_save}' сохранен в '{data_processed_dir}'")
+    logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
+
     return fn_save, fm_stat_save
 
 def add_check_comments(path_tkbd_processed, fn_save):
@@ -646,7 +663,8 @@ def add_check_comments(path_tkbd_processed, fn_save):
     str_date = dt.strftime("%Y_%m_%d_%H%M")
     fn_ch_com_save = 'tkbd_check_commented_' + str_date + '.xlsx'
     wb.save(os.path.join(path_tkbd_processed, fn_ch_com_save))    
-    logger.info(f" file '{fn_ch_com_save}' save in '{path_tkbd_processed}'")
+    # logger.info(f" file '{fn_ch_com_save}' save in '{path_tkbd_processed}'")
+    logger.info(f"Файл с примечаниями '{fn_ch_com_save}' сохранен в '{path_tkbd_processed}'")
 
 def load_check_dictionaries(path_supp_dicts):
     global df_services_MGFOMS, df_services_804n, df_RM, df_MNN
