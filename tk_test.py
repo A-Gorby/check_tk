@@ -325,19 +325,30 @@ def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
     # chunks_positions = test_extract_chunk_positions(df_tk, j, print_debug = print_debug, print_debug_main = print_debug_main)
     chunks_positions, all_cols_found = test_extract_chunk_positions(fn, df_tk, print_debug = print_debug, print_debug_main = print_debug_main)
     chunks_positions_flat = [item for sublist in chunks_positions for item in sublist[:2]]
-    if print_debug_main: print("chunks_positions_flat:", chunks_positions_flat)
+    if print_debug_main: 
+        print("chunks_positions:", chunks_positions)
+        print("chunks_positions_flat:", chunks_positions_flat)
     
 
     if None in chunks_positions_flat or not all_cols_found: 
         # if print_debug_main:
         # print(f"{fn}, {sheet_name}: Error: didn't all chunks positions find")
-        logger.error(f"{fn}, {sheet_name}: Error: didn't find all chunks positions or all columns")
+        logger.error(f"File: {fn}")
+        logger.error(f"Sheet: {sheet_name}: Error: didn't find all chunks positions or all columns")
         logger.info(f"chunks_positions_flat: {chunks_positions_flat}")
         logger.info(f"all_cols_found: {all_cols_found}")
+        if chunks_positions_flat[0] is None:
+            logger.info(f"Not found chunk: Услуги")
+        if chunks_positions_flat[2] is None:
+            logger.info(f"Not found chunk: ЛП")
+        if chunks_positions_flat[4] is None:
+            logger.info(f"Not found chunk: МИ/РМ")
+        
         if exit_at_not_all_cols:
             logger.info("Process finised")
             sys.exit(2)
         else:
+            logger.info(f"Обработка данного листа Excel производиться не будет")
             return [None, None, None]
     else: 
 
@@ -404,6 +415,7 @@ def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
     # fn_save = save_to_excel(df_chunks, total_sheet_names, path_tkbd_processed, 'test_' + fn)
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
+    
 
 def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
@@ -463,7 +475,7 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
                  0, 0, 0])
 
     if df_total[0] is not None: 
-        print(df_total[0].shape)
+        # print(df_total[0].shape)
         total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
         # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
         fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
@@ -478,6 +490,7 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
     logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
     logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
     return fn_save, fm_stat_save
+
 
 def run_check_by_files(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
@@ -558,7 +571,7 @@ def add_check_comments(path_tkbd_processed, fn_save):
     col_num_check_row_total_lst = [8+desc_cols_num, 8+desc_cols_num, 7+desc_cols_num]
     col_num_check_row_codes_lst = [9+desc_cols_num, 9+desc_cols_num, 8+desc_cols_num]
 
-    print(wb.sheetnames)
+    # print(wb.sheetnames)
     for chunk_num, ws_title in enumerate(wb.sheetnames):
         ws = wb[ws_title] #wb['Услуги']
         # ws.delete_cols(col_num_check_row_total_lst[chunk_num], 40)
@@ -646,19 +659,22 @@ def load_check_dictionaries(path_supp_dicts):
     df_services_MGFOMS = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
     df_services_MGFOMS.rename (columns = {'COD': 'code', 'NAME': 'name'}, inplace=True)
     df_services_MGFOMS['code'] = df_services_MGFOMS['code'].astype(str)
-    print("df_services_MGFOMS", df_services_MGFOMS.shape, df_services_MGFOMS.columns)
+    # print("df_services_MGFOMS", df_services_MGFOMS.shape, df_services_MGFOMS.columns)
+    logger.info(f"Загружен справочник 'Услуги по реестру  МГФОМС': {str(df_services_MGFOMS.shape)}")
 
     sheet_name = '804н'
     df_services_804n = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name, header=1)
     df_services_804n.rename (columns = {'Код услуги': 'code', 'Наименование медицинской услуги': 'name'}, inplace=True)
-    print("df_services_804n", df_services_804n.shape, df_services_804n.columns)
+    # print("df_services_804n", df_services_804n.shape, df_services_804n.columns)
+    logger.info(f"Загружен справочник 'Услуги по приказу 804н': {str(df_services_804n.shape)}")
 
     fn = 'НВМИ_РМ.xls'
     sheet_name = 'Sheet1'
     df_RM = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
     df_RM.rename (columns = {'Код': 'code', 'Наименование': 'name'}, inplace=True)
     df_RM['code'] = df_RM['code'].astype(str)
-    print("df_RM", df_RM.shape, df_RM.columns, df_RM.dtypes)
+    # print("df_RM", df_RM.shape, df_RM.columns, df_RM.dtypes)
+    logger.info(f"Загружен справочник {fn}: {str(df_RM.shape)}")
 
     fn = 'МНН.xlsx'
     sheet_name = 'Sheet1'
@@ -668,7 +684,8 @@ def load_check_dictionaries(path_supp_dicts):
                           'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
                          },
                inplace=True)
-    print("df_MNN", df_MNN.shape, df_MNN.columns)
+    # print("df_MNN", df_MNN.shape, df_MNN.columns)
+    logger.info(f"Загружен справочник {fn}: {str(df_MNN.shape)}")
     return df_services_MGFOMS, df_services_804n, df_RM, df_MNN
 
 
@@ -725,7 +742,7 @@ def main (data_source_dir = './data/source/',
     if xlsx_description is None:
         # run_check_by_files(data_source_dir, data_processed_dir)
         fn_save, fm_stat_save = run_check_by_files(data_source_dir, data_processed_dir,
-                     print_debug = False, print_debug_main = False) #True)
+                     print_debug = False, print_debug_main = True) #True)
     else: # run_check_by_desc(data_source_dir, data_processed_dir, data_root_dir, xlsx_description)
         fn_save, fm_stat_save = run_check_by_desc(data_root_dir, xlsx_description, data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = False) #True)

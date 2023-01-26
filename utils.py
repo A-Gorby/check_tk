@@ -50,7 +50,51 @@ def find_rec_pd(df, srch_str, print_debug=False):
     if print_debug: print('not found:', srch_str)
     return rec_num
 
+# new
 def find_col(srch_cols_lst : list, # list of list
+             cols_lst: np.ndarray,
+            print_debug = False):
+    if print_debug: 
+        pass
+        # print("srch_cols_lst", srch_cols_lst)
+        # print("row.values", cols_lst)
+    gt_col_nums, col_nums, col_names = [], [], [] #None, None, None
+    # row_values_rejoin = [' '.join((' '.join(v.split('\n'))).split(' ')).replace('Усредненая','Усредненная') # так только по оному пробелу происходит разделение
+    # print(cols_lst.dtype)
+    # row_values_rejoin = [' ) '.join(' ( '.join(' '.join(' '.join(v.split('\n')]).split()).split('(')).split(')')).replace('Усредненая','Усредненная').strip().lower() 
+    row_values_rejoin = [' ) '.join(' ( '.join(' '.join(' '.join([vv.strip() for vv in v.split()]).split('\n')).split('(')).split(')')).replace('Усредненая','Усредненная').strip().lower() 
+                             if ((type(v)==str) or (type(v)==np.str_) or (type(v)==object))  else '' # or not ((type(v)==float) or (type(v)==int))) 
+                                     for v in cols_lst ]
+    row_values_rejoin = [ ' '.join([vv.strip() for vv in v.split()]) for v in row_values_rejoin]
+    if print_debug: print(f"find_col: row_values_rejoin: {row_values_rejoin}")
+    fl_found = False
+    for i, cols_l in  enumerate(srch_cols_lst):
+    # for i, srch_col in  enumerate(srch_cols_lst):
+        for srch_col in cols_l:
+            # srch_col_rejoin = ' '.join((' '.join(srch_col.split())).split('\n')).strip().lower()
+            # srch_col_rejoin = ' ) '.join(' ( '.join(' '.join(' '.join([vv.strip() for vv in srch_col.split()]).split('\n')).split('(')).split(')')).strip().lower()
+            srch_col_rejoin = ' ) '.join(' ( '.join(' '.join(' '.join(srch_col.split('\n')).split()).split('(')).split(')')).strip().lower()
+            srch_col_rejoin = ' '.join([vv.strip() for vv in srch_col_rejoin.split()]) # уберем лишние пробелы между словами после апдейта по скобкам
+            
+            if print_debug: print(f"find_col: srch_col_rejoin: '{srch_col_rejoin}'")
+            if srch_col_rejoin in row_values_rejoin:
+                fl_found = True
+                # gt_col_num = i
+                # col_num = row_values_rejoin.index(srch_col_rejoin)
+                # col_name = cols_lst[col_num]
+                gt_col_nums.append(i)
+                col_nums.append(row_values_rejoin.index(srch_col_rejoin))
+                col_names.append(str(cols_lst[row_values_rejoin.index(srch_col_rejoin)]))
+                # return gt_col_num, col_name, col_num
+    if fl_found and print_debug: 
+        pass
+        # print("srch_cols_lst", srch_cols_lst)
+        # print("row.values", cols_lst)
+        # print(gt_col_nums, col_nums, col_names)
+    return gt_col_nums, col_nums, col_names
+
+# work version find_col
+def find_col_w(srch_cols_lst : list, # list of list
              cols_lst: np.ndarray,
             print_debug = False):
     if print_debug: 
@@ -83,7 +127,75 @@ def find_col(srch_cols_lst : list, # list of list
         # print(gt_col_nums, col_nums, col_names)
     return gt_col_nums, col_nums, col_names 
 
+# new version  25.01.2023    
 def find_rec_pd_by_col_names_02(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
+    row_num = None
+    fl_found = False
+    fl_incorrect_found = False
+    fl_all_cols_found = False
+    cols_found = []
+    cols_num_found = []
+    cols_found_incorrect = []
+    cols_num_found_incorrect = []
+    result_cols = []
+    
+    for i, row in df.iterrows():
+        # if i <24: continue
+        # if i >30: break
+        fl_found = False
+        # for j in range(3):
+        gt_col_nums, col_names, col_nums = find_col(srch_str_lst[main_cols[0]:main_cols[1]+1], row.values, print_debug)
+        # print(i, gt_col_num, col_name, col_num)
+        if len(gt_col_nums)>0: # # найдены оснвоыне колокни
+            fl_found = True
+            if print_debug: print(i, gt_col_nums, col_names, col_nums)
+                # break
+        else: # еще одна поптыка найтипо ключевым словам
+            pass
+            
+        if fl_found:  # найдены оснвоыне колокни
+            # теперь ищем все сотальные колокни
+            gt_col_nums, col_nums, col_names = find_col(srch_str_lst, row.values, print_debug)
+            if len(gt_col_nums)>0: # is not None:
+                fl_found = True
+                row_num = i
+                if print_debug: print(row_num, gt_col_nums, col_names, col_nums)
+            # print(len(gt_col_nums), len(srch_str_lst))
+            if len(gt_col_nums)< len(srch_str_lst):
+                not_found_cols_nums = list(set(list(range(len(srch_str_lst)))) - set(gt_col_nums))
+                not_found_cols_names = [v[0] for v in np.array(srch_str_lst, dtype=object)[not_found_cols_nums]]
+                # print(f"file: {file_name}, chunk: {chunk}, строка {i}: не найдены все названия колонок, а именно:", not_found_cols_nums,
+                #      not_found_cols_names)
+                logger.info(f"file: {file_name}, chunk: {chunk}, строка {i}: не найдены все названия колонок, а именно:"+\
+                           f" {str(not_found_cols_nums)}, {str(not_found_cols_names)}")
+                  # list(np.array(srch_str_lst)[:,0]).index(not_found_cols_nums))
+                
+                ideal_gt_col_nums = list(range(len(srch_str_lst)))
+                num_diff = len(ideal_gt_col_nums) - len(gt_col_nums)
+                i_num_ins = -1
+                if num_diff ==1:
+                    for i_num in ideal_gt_col_nums:
+                        if i_num not in gt_col_nums:
+                            if (i_num == 0) or (i_num==ideal_gt_col_nums[-1]):
+                                col_nums.insert(i_num, i_num)
+                                gt_col_nums.insert(i_num, i_num)
+                                i_num_ins = i_num
+                                col_names.insert(i_num, srch_str_lst[i_num_ins][0])
+                            # else:
+                            # для РМ например непонятно какую брать колонку 2 или 3-ю жто не просто
+                            # gt_col_nums = [0, 1, 3, 4, 5, 6]
+                            # col_nums = [0, 1,  4, 5, 6, 7]
+                            #     col_nums.insert(i_num, col_nums[i_num-1]+1)
+                            #     gt_col_nums.insert(i_num, i_num)
+                    if len(ideal_gt_col_nums) == len(gt_col_nums):
+                        logger.info(f"Вставлена колонка  {i_num_ins}, {str(srch_str_lst[i_num_ins][0])}")
+                        # print(f"find_rec_pd_by_col_names_02:", row_num, gt_col_nums, col_names, col_nums)
+                        return row_num, gt_col_nums, col_names, col_nums
+            else:
+                return row_num, gt_col_nums, col_names, col_nums
+    return row_num, gt_col_nums, col_names, col_nums
+
+def find_rec_pd_by_col_names_02_w(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
     row_num = None
     fl_found = False
     fl_incorrect_found = False
@@ -124,7 +236,67 @@ def find_rec_pd_by_col_names_02(file_name, df, chunk, srch_str_lst, main_cols, p
                 return row_num, gt_col_nums, col_names, col_nums
     return row_num, gt_col_nums, col_names, col_nums
 
+# new version
 def test_extract_chunk_positions(file_name, df_tk, print_debug = False, print_debug_main = False):
+    chunk_positions = [[None, None, None], [None, None, None], [None, None, None]]
+    rec_num_0 = None
+    # all_cols_found = [True, True, True] # по коли-ву обрбатываемых сейчас чанков
+    all_cols_found = True
+    for j in range(6): # на всякий случай бывает что не бывает лечнбного питания лиеты после МИ 
+        # проверяем наличие заголовков других блоков данных
+        if print_debug: 
+            print("chunk:", j)
+        rec_num_0 = find_rec_pd(df_tk, data_chunks[j], print_debug=print_debug)
+        if rec_num_0 is not None:
+            pass
+            if print_debug: print(rec_num_0)
+        else:
+            rec_num_0 = find_rec_pd(df_tk, data_chunks_alter[j], print_debug=print_debug)
+            if rec_num_0 is not None:
+                pass
+                if print_debug: print(rec_num_0)
+            else:
+                rec_num_0 = find_rec_pd(df_tk, data_chunks_alter_02[j], print_debug=print_debug)
+                if rec_num_0 is not None:
+                    pass
+                    if print_debug: print(rec_num_0)
+        if rec_num_0 is not None:
+            if (j>0) and (j<3):
+                chunk_positions[j-1][1]= rec_num_0
+                # try:
+                #     chunk_positions[j-1][1]= rec_num_0
+                # except Exception as err:
+                #     print(err, "chunk_positions[j-1][1]= rec_num_0", j, chunk_positions)
+                #     sys.exit(2)
+            elif j>=3:
+                if chunk_positions[2][1] is None:
+                    chunk_positions[2][1] = rec_num_0
+                
+            
+        if j <3:
+            row_num, gt_col_nums, col_names, col_nums = \
+                find_rec_pd_by_col_names_02(file_name, df_tk, j, cols_chunks_02[j], main_cols[j], print_debug = print_debug)
+            # print(f"test_extract_chunk_positions: chunk: {j} row_num, gt_col_nums, col_names, col_nums", row_num, gt_col_nums, col_names, col_nums)
+            if len (gt_col_nums) < len (cols_chunks_02[j]):
+                # print(f"test_extract_chunk_positions: chunk: {j} ->len (gt_col_nums) < len (cols_chunks_02[j])")
+                all_cols_found = False
+                pass
+            if row_num is not None:
+                chunk_positions[j][0] = row_num+1
+                chunk_positions[j][2] = col_nums
+                if j>0 and chunk_positions[j-1][1] is None:
+                    chunk_positions[j-1][1] = row_num
+            if print_debug: print()
+            if print_debug: 
+                # print("chunk:", j)
+                print(row_num, gt_col_nums, col_names, col_nums)
+
+    
+    
+    return chunk_positions, all_cols_found
+
+# old version test_extract_chunk_positions
+def test_extract_chunk_positions_w(file_name, df_tk, print_debug = False, print_debug_main = False):
     chunk_positions = [[None, None, None], [None, None, None], [None, None, None]]
     rec_num_0 = None
     all_cols_found = True
