@@ -496,7 +496,7 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         fm_stat_save = None
     # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
     # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
-    logger.info(f"Файл проверки '{fn_ch_com_save}' сохранен в '{data_processed_dir}'")
+    logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
     logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
 
     return fn_save, fm_stat_save
@@ -576,7 +576,7 @@ def run_check_by_files(data_source_dir, data_processed_dir,
             fm_stat_save = None
     # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
     # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
-    logger.info(f"Файл проверки '{fn_ch_com_save}' сохранен в '{data_processed_dir}'")
+    logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
     logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
 
     return fn_save, fm_stat_save
@@ -760,7 +760,7 @@ def main (data_source_dir = './data/source/',
     if xlsx_description is None:
         # run_check_by_files(data_source_dir, data_processed_dir)
         fn_save, fm_stat_save = run_check_by_files(data_source_dir, data_processed_dir,
-                     print_debug = False, print_debug_main = True) #True)
+                     print_debug = False, print_debug_main = False) #True)
     else: # run_check_by_desc(data_source_dir, data_processed_dir, data_root_dir, xlsx_description)
         fn_save, fm_stat_save = run_check_by_desc(data_root_dir, xlsx_description, data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = False) #True)
