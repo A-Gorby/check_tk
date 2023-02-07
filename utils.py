@@ -403,6 +403,34 @@ def save_to_excel(df_total, total_sheet_names, save_path, fn):
             df.to_excel(writer, sheet_name = total_sheet_names[i], index=False)
     return fn_date    
 
+def restore_df_from_pickle(path_files, fn_pickle):
+
+    if fn_pickle is None:
+        logger.error('Restore pickle from ' + path_files + ' failed!')
+        sys.exit(2)
+    if os.path.exists(os.path.join(path_files, fn_pickle)):
+        df = pd.read_pickle(os.path.join(path_files, fn_pickle))
+        # logger.info('Restore ' + re.sub(path_files, '', fn_pickle_с) + ' done!')
+        logger.info('Restore ' + fn_pickle + ' done!')
+        logger.info('Shape: ' + str(df.shape))
+    else:
+        # logger.error('Restore ' + re.sub(path_files, '', fn_pickle_с) + ' from ' + path_files + ' failed!')
+        logger.error('Restore ' + fn_pickle + ' from ' + path_files + ' failed!')
+    return df
+
+def unzip_file(path_source, fn_zip, work_path):
+    logger.info('Unzip ' + fn_zip + ' start...')
+
+    try:
+        with zipfile.ZipFile(path_source + fn_zip, 'r') as zip_ref:
+            fn_list = zip_ref.namelist()
+            zip_ref.extractall(work_path)
+        logger.info('Unzip ' + fn_zip + ' done!')
+        return fn_list[0]
+    except Exception as err:
+        logger.error('Unzip error: ' + str(err))
+        sys.exit(2)
+
 def print_err_messages(rez_code_values, err_msg_lst):
     for i, rez_code_sublst in enumerate(rez_code_values):
         for j, rez_code in enumerate(rez_code_sublst):
