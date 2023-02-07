@@ -38,6 +38,58 @@ from manual_dictionaries import err_msg_lst
 
 # from tk_test import check_functions_lst
 
+def load_check_dictionaries(path_supp_dicts):
+    global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
+    # if not os.path.exists(supp_dict_dir):
+    #     os.path.mkdir(supp_dict_dir)
+
+    fn = 'Коды МГФОМС.xlsx'
+    fn = 'Коды МГФОМС и 804н.xlsx'
+    sheet_name = 'МГФОМС'
+    df_services_MGFOMS = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+    df_services_MGFOMS.rename (columns = {'COD': 'code', 'NAME': 'name'}, inplace=True)
+    df_services_MGFOMS['code'] = df_services_MGFOMS['code'].astype(str)
+    # print("df_services_MGFOMS", df_services_MGFOMS.shape, df_services_MGFOMS.columns)
+    logger.info(f"Загружен справочник 'Услуги по реестру  МГФОМС': {str(df_services_MGFOMS.shape)}")
+
+    sheet_name = '804н'
+    df_services_804n = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name, header=1)
+    df_services_804n.rename (columns = {'Код услуги': 'code', 'Наименование медицинской услуги': 'name'}, inplace=True)
+    # print("df_services_804n", df_services_804n.shape, df_services_804n.columns)
+    logger.info(f"Загружен справочник 'Услуги по приказу 804н': {str(df_services_804n.shape)}")
+
+    fn = 'НВМИ_РМ.xls'
+    sheet_name = 'Sheet1'
+    df_RM = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+    df_RM.rename (columns = {'Код': 'code', 'Наименование': 'name'}, inplace=True)
+    df_RM['code'] = df_RM['code'].astype(str)
+    # print("df_RM", df_RM.shape, df_RM.columns, df_RM.dtypes)
+    logger.info(f"Загружен справочник {fn}: {str(df_RM.shape)}")
+    
+    # path_supp_dicts_processed = 'D:/DPP/02_tkbd/data/supp_dict/processed/'
+    fn_df_mi_org_gos = 'df_mi_org_gos_release_20230129_2023_02_07_1331.pickle'
+    fn_df_mi_national = 'df_mi_national_release_20230201_2023_02_06_1013.pickle'
+    # df_mi_org_gos = restore_df_from_pickle(path_supp_dicts_processed, fn_df_mi_org_gos)
+    # df_mi_national = restore_df_from_pickle(path_supp_dicts_processed, fn_df_mi_national)
+    df_mi_org_gos = restore_df_from_pickle(path_supp_dicts, fn_df_mi_org_gos)
+    df_mi_national = restore_df_from_pickle(path_supp_dicts, fn_df_mi_national)
+    
+    
+
+    fn = 'МНН.xlsx'
+    sheet_name = 'Sheet1'
+    df_MNN = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+    df_MNN.rename (columns = {'МНН': 'mnn_standard', 
+                          'Торговое наименование лекарственного препарата': 'trade_name',
+                          'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
+                         },
+               inplace=True)
+    # print("df_MNN", df_MNN.shape, df_MNN.columns)
+    logger.info(f"Загружен справочник {fn}: {str(df_MNN.shape)}")
+    return df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
+# df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national = load_check_dictionaries(path_supp_dicts)
+
+
 def find_rec_pd(df, srch_str, print_debug=False):
     rec_num = None
     for i, row in df.iterrows():

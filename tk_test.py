@@ -196,6 +196,17 @@ def check_MNN(val):
         return 0
 
 def check_RM_name (val):
+    # df_mi_org_gos, df_mi_national
+    try:
+        if df_mi_org_gos.query(f"name_clean == '{val}'" ).shape[0] >0: 
+            return 1
+        elif df_mi_national.query(f"name == '{val}'" ).shape[0] >0: 
+            return 1
+        else: return 0
+    except:
+        return 0
+
+def check_RM_name_old (val):
     try:
         if df_RM.query(f"name == '{val}'" ).shape[0] >0: 
             return 1
@@ -204,9 +215,18 @@ def check_RM_name (val):
         return 0
     
 def check_RM_code(val):
+    # df_mi_org_gos, df_mi_national
+    if df_mi_org_gos.query(f"kind == '{val}'" ).shape[0] >0: 
+        return 1
+    elif df_mi_national.query(f"code == '{val}'" ).shape[0] >0: 
+        return 1
+    else: return 0
+
+def check_RM_code_old(val):
     if df_RM.query(f"code == '{val}'" ).shape[0] >0: 
         return 1
     else: return 0
+
 def check_multiple_RM(val):
     # проверка кратности МИ/РМ
     try:
@@ -559,21 +579,21 @@ def run_check_by_files(data_source_dir, data_processed_dir,
                 stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                      0, 0, 0])
 
-        if df_total[0] is not None: 
-            print(df_total[0].shape)
-            total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
-            # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
-            fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
-            # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
-            # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
-            df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
-            
-    
-            fm_stat_save = save_to_excel([df_stat_tk], 
-                          ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
-        else: 
-            fn_save = None
-            fm_stat_save = None
+    if df_total[0] is not None: 
+        print(df_total[0].shape)
+        total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
+        # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
+        fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
+        # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
+        # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+        df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
+        
+
+        fm_stat_save = save_to_excel([df_stat_tk], 
+                        ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+    else: 
+        fn_save = None
+        fm_stat_save = None
     # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
     # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
     logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
@@ -584,8 +604,9 @@ def run_check_by_files(data_source_dir, data_processed_dir,
 def add_check_comments(path_tkbd_processed, fn_save):
     wb = load_workbook(os.path.join(path_tkbd_processed, fn_save))
     cols_wdth_lst = [[5,20,70,10,15,15,10,10], [5,20,15,25,15,15,10,10], [5,70,15,15,15,15,10,10]]
-    desc_cols_num = 6
+    desc_cols_num = 6 # Кол-во колонок перед: Профиль Код Наименование ТК Модель пациента Файл Лист
     col_num_check_row_total_lst = [8+desc_cols_num, 8+desc_cols_num, 7+desc_cols_num]
+    # 8/7 кол-во колонок в каждом чанке перед результирующим кодом проверки 
     col_num_check_row_codes_lst = [9+desc_cols_num, 9+desc_cols_num, 8+desc_cols_num]
 
     # print(wb.sheetnames)
@@ -666,45 +687,45 @@ def add_check_comments(path_tkbd_processed, fn_save):
     # logger.info(f" file '{fn_ch_com_save}' save in '{path_tkbd_processed}'")
     logger.info(f"Файл с примечаниями '{fn_ch_com_save}' сохранен в '{path_tkbd_processed}'")
 
-def load_check_dictionaries(path_supp_dicts):
-    global df_services_MGFOMS, df_services_804n, df_RM, df_MNN
-    # if not os.path.exists(supp_dict_dir):
-    #     os.path.mkdir(supp_dict_dir)
+# def load_check_dictionaries(path_supp_dicts):
+#     global df_services_MGFOMS, df_services_804n, df_RM, df_MNN
+#     # if not os.path.exists(supp_dict_dir):
+#     #     os.path.mkdir(supp_dict_dir)
 
-    fn = 'Коды МГФОМС.xlsx'
-    fn = 'Коды МГФОМС и 804н.xlsx'
-    sheet_name = 'МГФОМС'
-    df_services_MGFOMS = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
-    df_services_MGFOMS.rename (columns = {'COD': 'code', 'NAME': 'name'}, inplace=True)
-    df_services_MGFOMS['code'] = df_services_MGFOMS['code'].astype(str)
-    # print("df_services_MGFOMS", df_services_MGFOMS.shape, df_services_MGFOMS.columns)
-    logger.info(f"Загружен справочник 'Услуги по реестру  МГФОМС': {str(df_services_MGFOMS.shape)}")
+#     fn = 'Коды МГФОМС.xlsx'
+#     fn = 'Коды МГФОМС и 804н.xlsx'
+#     sheet_name = 'МГФОМС'
+#     df_services_MGFOMS = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+#     df_services_MGFOMS.rename (columns = {'COD': 'code', 'NAME': 'name'}, inplace=True)
+#     df_services_MGFOMS['code'] = df_services_MGFOMS['code'].astype(str)
+#     # print("df_services_MGFOMS", df_services_MGFOMS.shape, df_services_MGFOMS.columns)
+#     logger.info(f"Загружен справочник 'Услуги по реестру  МГФОМС': {str(df_services_MGFOMS.shape)}")
 
-    sheet_name = '804н'
-    df_services_804n = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name, header=1)
-    df_services_804n.rename (columns = {'Код услуги': 'code', 'Наименование медицинской услуги': 'name'}, inplace=True)
-    # print("df_services_804n", df_services_804n.shape, df_services_804n.columns)
-    logger.info(f"Загружен справочник 'Услуги по приказу 804н': {str(df_services_804n.shape)}")
+#     sheet_name = '804н'
+#     df_services_804n = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name, header=1)
+#     df_services_804n.rename (columns = {'Код услуги': 'code', 'Наименование медицинской услуги': 'name'}, inplace=True)
+#     # print("df_services_804n", df_services_804n.shape, df_services_804n.columns)
+#     logger.info(f"Загружен справочник 'Услуги по приказу 804н': {str(df_services_804n.shape)}")
 
-    fn = 'НВМИ_РМ.xls'
-    sheet_name = 'Sheet1'
-    df_RM = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
-    df_RM.rename (columns = {'Код': 'code', 'Наименование': 'name'}, inplace=True)
-    df_RM['code'] = df_RM['code'].astype(str)
-    # print("df_RM", df_RM.shape, df_RM.columns, df_RM.dtypes)
-    logger.info(f"Загружен справочник {fn}: {str(df_RM.shape)}")
+#     fn = 'НВМИ_РМ.xls'
+#     sheet_name = 'Sheet1'
+#     df_RM = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+#     df_RM.rename (columns = {'Код': 'code', 'Наименование': 'name'}, inplace=True)
+#     df_RM['code'] = df_RM['code'].astype(str)
+#     # print("df_RM", df_RM.shape, df_RM.columns, df_RM.dtypes)
+#     logger.info(f"Загружен справочник {fn}: {str(df_RM.shape)}")
 
-    fn = 'МНН.xlsx'
-    sheet_name = 'Sheet1'
-    df_MNN = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
-    df_MNN.rename (columns = {'МНН': 'mnn_standard', 
-                          'Торговое наименование лекарственного препарата': 'trade_name',
-                          'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
-                         },
-               inplace=True)
-    # print("df_MNN", df_MNN.shape, df_MNN.columns)
-    logger.info(f"Загружен справочник {fn}: {str(df_MNN.shape)}")
-    return df_services_MGFOMS, df_services_804n, df_RM, df_MNN
+#     fn = 'МНН.xlsx'
+#     sheet_name = 'Sheet1'
+#     df_MNN = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+#     df_MNN.rename (columns = {'МНН': 'mnn_standard', 
+#                           'Торговое наименование лекарственного препарата': 'trade_name',
+#                           'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
+#                          },
+#                inplace=True)
+#     # print("df_MNN", df_MNN.shape, df_MNN.columns)
+#     logger.info(f"Загружен справочник {fn}: {str(df_MNN.shape)}")
+#     return df_services_MGFOMS, df_services_804n, df_RM, df_MNN
 
 
 def check_input_pars(data_source_dir, data_processed_dir, data_root_dir, xlsx_description, supp_dict_dir) :
@@ -750,12 +771,14 @@ def main (data_source_dir = './data/source/',
     supp_dict_dir = './data/supp_dict/',
     ):
     # global smnn_list_df, klp_list_dict_df, zvnlp_df, znvlp_date, znvlp_date_format, esklp_date_format #esklp_date
-    global df_services_MGFOMS, df_services_804n, df_RM, df_MNN
+    global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
+    
     check_input_pars(data_source_dir, data_processed_dir, data_root_dir, xlsx_description, supp_dict_dir)    
 
     # supp_dict_dir =  'D:/DPP/02_TKBD/data/supp_dict/source/'
     # load_check_dictionaries(os.path.join(data_root_dir,'supp_dict'))
-    df_services_MGFOMS, df_services_804n, df_RM, df_MNN = load_check_dictionaries(supp_dict_dir)
+    # df_services_MGFOMS, df_services_804n, df_RM, df_MNN = load_check_dictionaries(supp_dict_dir)
+    df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national = load_check_dictionaries(supp_dict_dir)
 
     if xlsx_description is None:
         # run_check_by_files(data_source_dir, data_processed_dir)
