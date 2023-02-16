@@ -89,6 +89,93 @@ def load_check_dictionaries(path_supp_dicts):
     return df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
 # df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national = load_check_dictionaries(path_supp_dicts)
 
+def np_unique_nan(lst: np.array, debug = False)->np.array: # a la version 2.4
+    lst_unique = None
+    if lst is None or (((type(lst)==float) or (type(lst)==np.float64)) and np.isnan(lst)):
+        # if debug: print('np_unique_nan:','lst is None or (((type(lst)==float) or (type(lst)==np.float64)) and math.isnan(lst))')
+        lst_unique = lst
+    else:
+        data_types_set = list(set([type(i) for i in lst]))
+        if debug: print('np_unique_nan:', 'lst:', lst, 'data_types_set:', data_types_set)
+        if ((type(lst)==list) or (type(lst)==np.ndarray)):
+            if debug: print('np_unique_nan:','if ((type(lst)==list) or (type(lst)==np.ndarray)):')
+            if len(data_types_set) > 1: # несколько типов данных
+                if list not in data_types_set and dict not in data_types_set and tuple not in data_types_set and type(None) not in data_types_set:
+                    lst_unique = np.array(list(set(lst)), dtype=object)
+                else:
+                    lst_unique = lst
+            elif len(data_types_set) == 1:
+                if debug: print("np_unique_nan: elif len(data_types_set) == 1:")
+                if list in data_types_set:
+                    lst_unique = np.unique(np.array(lst, dtype=object))
+                elif  np.ndarray in data_types_set:
+                    # print('elif  np.ndarray in data_types_set :')
+                    lst_unique = np.unique(lst.astype(object))
+                    # lst_unique = np_unique_nan(lst_unique)
+                    lst_unique = np.asarray(lst, dtype = object)
+                    # lst_unique = np.unique(lst_unique)
+                elif type(None) in data_types_set:
+                    # lst_unique = np.array(list(set(lst)))
+                    lst_unique = np.array(list(set(list(lst))))
+                elif dict in  data_types_set:
+                    lst_unique = lst
+                    # np.unique(lst)
+                elif type(lst) == np.ndarray:
+                    if debug: print("np_unique_nan: type(lst) == np.ndarray")
+                    if (lst.dtype.kind == 'f') or  (lst.dtype == np.float64) or  (float in data_types_set):
+                        if debug: print("np_unique_nan: (lst.dtype.kind == 'f')")
+                        lst_unique = np.unique(lst.astype(float))
+                        # if debug: print("np_unique_nan: lst_unique predfinal:", lst_unique)
+                        # lst_unique = np.array(list(set(list(lst))))
+                        # if debug: print("np_unique_nan: lst_unique predfinal v2:", lst_unique)
+                        # if np.isnan(lst).all():
+                        #     lst_unique = np.nan
+                        #     if debug: print("np_unique_nan: lst_unique predfinal v3:", lst_unique)
+                    elif (lst.dtype.kind == 'S') :
+                        if debug: print("np_unique_nan: lst.dtype == string")
+                        lst_unique = np.array(list(set(list(lst))))
+                        if debug: print(f"np_unique_nan: lst_unique 0: {lst_unique}")
+                    elif lst.dtype == object:
+                        if debug: print("np_unique_nan: lst.dtype == object")
+                        if (type(lst[0])==str) or (type(lst[0])==np.str_) :
+                            try:
+                                lst_unique = np.unique(lst)
+                            except Exception as err:
+                                lst_unique = np.array(list(set(list(lst))))
+                        else:
+                            lst_unique = np.array(list(set(list(lst))))
+                        if debug: print(f"np_unique_nan: lst_unique 0: {lst_unique}")
+                    else:
+                        if debug: print("np_unique_nan: else 0")
+                        lst_unique = np.unique(lst)
+                else:
+                    if debug: print('np_unique_nan:','else i...')
+                    lst_unique = np.array(list(set(lst)))
+                    
+            elif len(data_types_set) == 0:
+                lst_unique = None
+            else:
+                # print('else')
+                lst_unique = np.array(list(set(lst)))
+        else: # другой тип данных
+            if debug: print('np_unique_nan:','другой тип данных')
+            # lst_unique = np.unique(np.array(list(set(lst)),dtype=object))
+            # lst_unique = np.unique(np.array(list(set(lst)))) # Исходим из того что все елеменыт спсика одного типа
+            lst_unique = lst
+    if type(lst_unique) == np.ndarray:
+        if debug: print('np_unique_nan: final: ', "if type(lst_unique) == np.ndarray")
+        if lst_unique.shape[0]==1: 
+            if debug: print('np_unique_nan: final: ', "lst_unique.shape[0]==1")
+            lst_unique = lst_unique[0]
+            if debug: print(f"np_unique_nan: final after: lst_unique: {lst_unique}")
+            if (type(lst_unique) == np.ndarray) and (lst_unique.shape[0]==1):  # двойная вложенность
+                if debug: print('np_unique_nan: final: ', 'one more', "lst_unique.shape[0]==1")
+                lst_unique = lst_unique[0]
+        elif lst_unique.shape[0]==0: lst_unique = None
+    if debug: print(f"np_unique_nan: return: lst_unique: {lst_unique}")
+    if debug: print(f"np_unique_nan: return: type(lst_unique): {type(lst_unique)}")
+    return lst_unique
+
 
 def find_rec_pd(df, srch_str, print_debug=False):
     rec_num = None
@@ -290,6 +377,68 @@ def find_rec_pd_by_col_names_02_w(file_name, df, chunk, srch_str_lst, main_cols,
 
 # new version
 def test_extract_chunk_positions(file_name, df_tk, print_debug = False, print_debug_main = False):
+    chunk_positions = [[None, None, None, None], [None, None, None, None], [None, None, None, None]]
+    rec_num_0 = None
+    # all_cols_found = [True, True, True] # по коли-ву обрбатываемых сейчас чанков
+    all_cols_found = True
+    cols_are_duplicated = False
+    for j in range(6): # на всякий случай бывает что не бывает лечнбного питания лиеты после МИ 
+        # проверяем наличие заголовков других блоков данных
+        if print_debug: 
+            print("chunk:", j)
+        rec_num_0 = find_rec_pd(df_tk, data_chunks[j], print_debug=print_debug)
+        if rec_num_0 is not None:
+            pass
+            if print_debug: print(rec_num_0)
+        else:
+            rec_num_0 = find_rec_pd(df_tk, data_chunks_alter[j], print_debug=print_debug)
+            if rec_num_0 is not None:
+                pass
+                if print_debug: print(rec_num_0)
+            else:
+                rec_num_0 = find_rec_pd(df_tk, data_chunks_alter_02[j], print_debug=print_debug)
+                if rec_num_0 is not None:
+                    pass
+                    if print_debug: print(rec_num_0)
+        if rec_num_0 is not None:
+            if (j>0) and (j<3):
+                chunk_positions[j-1][1]= rec_num_0
+                # try:
+                #     chunk_positions[j-1][1]= rec_num_0
+                # except Exception as err:
+                #     print(err, "chunk_positions[j-1][1]= rec_num_0", j, chunk_positions)
+                #     sys.exit(2)
+            elif j>=3:
+                if chunk_positions[2][1] is None:
+                    chunk_positions[2][1] = rec_num_0
+                
+            
+        if j <3:
+            row_num, gt_col_nums, col_names, col_nums = \
+                find_rec_pd_by_col_names_02(file_name, df_tk, j, cols_chunks_02[j], main_cols[j], print_debug = print_debug)
+            # print(f"test_extract_chunk_positions: chunk: {j} row_num, gt_col_nums, col_names, col_nums", row_num, gt_col_nums, col_names, col_nums)
+            if len (gt_col_nums) < len (cols_chunks_02[j]):
+                # print(f"test_extract_chunk_positions: chunk: {j} ->len (gt_col_nums) < len (cols_chunks_02[j])")
+                all_cols_found = False
+            if (len (col_nums) > len (cols_chunks_02[j])) or (len(gt_col_nums) > len(set(gt_col_nums))):
+                # the columns are duplicated
+                cols_are_duplicated = True
+            if row_num is not None:
+                chunk_positions[j][0] = row_num+1
+                chunk_positions[j][2] = col_nums
+                chunk_positions[j][3] = gt_col_nums
+                if j>0 and chunk_positions[j-1][1] is None:
+                    chunk_positions[j-1][1] = row_num
+            if print_debug: print()
+            if print_debug: 
+                # print("chunk:", j)
+                print(row_num, gt_col_nums, col_names, col_nums)
+
+    
+    
+    return chunk_positions, all_cols_found, cols_are_duplicated
+
+def test_extract_chunk_positions_00(file_name, df_tk, print_debug = False, print_debug_main = False):
     chunk_positions = [[None, None, None], [None, None, None], [None, None, None]]
     rec_num_0 = None
     # all_cols_found = [True, True, True] # по коли-ву обрбатываемых сейчас чанков
@@ -454,6 +603,35 @@ def save_to_excel(df_total, total_sheet_names, save_path, fn):
         for i, df in enumerate(df_total):
             df.to_excel(writer, sheet_name = total_sheet_names[i], index=False)
     return fn_date    
+
+def get_humanize_filesize(path, fn):
+    human_file_size = None
+    try:
+        fn_full = os.path.join(path, fn)
+    except Exception as err:
+        print(err)
+        return human_file_size
+    if os.path.exists(fn_full):
+        file_size = os.path.os.path.getsize(fn_full)
+        human_file_size = humanize.naturalsize(file_size)
+    return human_file_size
+
+def save_df_to_excel(df, path_to_save, fn_main, columns = None, b=0, e=None):
+    offset = datetime.timezone(datetime.timedelta(hours=3))
+    dt = datetime.datetime.now(offset)
+    str_date = dt.strftime("%Y_%m_%d_%H%M")
+    fn = fn_main + '_' + str_date + '.xlsx'
+    logger.info(f"'{fn}' save - start ...")
+    if e is None or (e <0):
+        e = df.shape[0]
+    if columns is None:
+        df[b:e].to_excel(path_to_save + fn, index = False)
+    else:
+        df[b:e].to_excel(path_to_save + fn, index = False, columns = columns)
+    logger.info(f"'{fn}' saved to '{path_to_save}'")
+    hfs = get_humanize_filesize(path_to_save, fn)
+    logger.info("Size: " + str(hfs))
+    return fn   
 
 def restore_df_from_pickle(path_files, fn_pickle):
 

@@ -1,16 +1,5 @@
 import logging
 df_services_MGFOMS, df_services_804n, df_RM, df_MNN = None, None, None, None
-# smnn_list_df, klp_list_dict_df, selection_df = None, None, None
-# esklp_date_format = None
-# np_lim_price_barcode_str = None
-# np_lim_price_reg_date_str =  None
-# klp_srch_list = None
-# klp_srch_list_columns = None
-# code_klp_id, mnn_standard_id, code_smnn_id, trade_name_id, trade_name_capitalize_id, \
-# form_standard_unify_id, lim_price_barcode_str_id, num_reg_id, lf_norm_name_id, dosage_norm_name_id = \
-#     None, None, None, None, None, None, None, None, None, None
-# dict__tn_lat__tn_ru_orig = None
-# dict__tn_lat_ext__tn_ru_orig = None
 
 # logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger('TKBD')
