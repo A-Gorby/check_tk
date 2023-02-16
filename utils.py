@@ -266,8 +266,83 @@ def find_col_w(srch_cols_lst : list, # list of list
         # print(gt_col_nums, col_nums, col_names)
     return gt_col_nums, col_nums, col_names 
 
-# new version  25.01.2023    
+# new version 16.02.2023
 def find_rec_pd_by_col_names_02(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
+    row_num = None
+    fl_found = False
+    fl_incorrect_found = False
+    fl_all_cols_found = False
+    cols_found = []
+    cols_num_found = []
+    cols_found_incorrect = []
+    cols_num_found_incorrect = []
+    result_cols = []
+    sections = ['Услуги', 'ЛП', 'РМ']
+    for i, row in df.iterrows():
+        # if i <24: continue
+        # if i >30: break
+        fl_found = False
+        # for j in range(3):
+        gt_col_nums, col_names, col_nums = find_col(srch_str_lst[main_cols[0]:main_cols[1]+1], row.values, print_debug)
+        # print(i, gt_col_num, col_name, col_num)
+        if len(gt_col_nums)>0: # # найдены оснвоыне колокни
+            fl_found = True
+            if print_debug: print(i, gt_col_nums, col_names, col_nums)
+                # break
+        else: # еще одна поптыка найтипо ключевым словам
+            pass
+            
+        if fl_found:  # найдены оснвоыне колокни
+            # теперь ищем все сотальные колокни
+            gt_col_nums, col_nums, col_names = find_col(srch_str_lst, row.values, print_debug)
+            if len(gt_col_nums)>0: # is not None:
+                fl_found = True
+                row_num = i
+                if print_debug: print(row_num, gt_col_nums, col_names, col_nums)
+            # print(len(gt_col_nums), len(srch_str_lst))
+            if len(gt_col_nums)< len(srch_str_lst):
+                not_found_cols_nums = list(set(list(range(len(srch_str_lst)))) - set(gt_col_nums))
+                not_found_cols_names = [v[0] for v in np.array(srch_str_lst, dtype=object)[not_found_cols_nums]]
+                # print(f"file: {file_name}, chunk: {chunk}, строка {i}: не найдены все названия колонок, а именно:", not_found_cols_nums,
+                #      not_found_cols_names)
+                logger.info(f"file: {file_name}") 
+                logger.info(f"Раздел: {sections[chunk]}, строка {i}: не найдены все названия колонок, а именно:"+\
+                           f" {str(not_found_cols_nums)}, {str(not_found_cols_names)}")
+                  # list(np.array(srch_str_lst)[:,0]).index(not_found_cols_nums))
+                
+                ideal_gt_col_nums = list(range(len(srch_str_lst)))
+                num_diff = len(ideal_gt_col_nums) - len(gt_col_nums)
+                i_num_ins = -1
+                if num_diff ==1:
+                    for i_num in ideal_gt_col_nums:
+                        if i_num not in gt_col_nums:
+                            if (i_num == 0) or (i_num==ideal_gt_col_nums[-1]): # work cersion
+                            # if (i_num >= 0) and (i_num<=ideal_gt_col_nums[-1]):
+                                col_nums.insert(i_num, i_num)
+                                gt_col_nums.insert(i_num, i_num)
+                                i_num_ins = i_num
+                                col_names.insert(i_num, srch_str_lst[i_num_ins][0])
+                            # else:
+                            # для РМ например непонятно какую брать колонку 2 или 3-ю жто не просто
+                            # gt_col_nums = [0, 1, 3, 4, 5, 6]
+                            # col_nums = [0, 1,  4, 5, 6, 7]
+#                                 # col_nums.insert(i_num, col_nums[i_num-1]+1)
+#                                 i_num_ins = gt_col_nums.index(i_num-1) + 1
+#                                 # i_num_ins = col_nums.index(i_num-1) + 1
+#                                 iin = col_nums.index(i_num-1) + 1
+#                                 i_num = i_num_ins
+# #                                 # col_nums.insert(i_num_ins, col_nums[i_num-1]+1)
+#                                 col_nums.insert(iin, i_num_ins) #, i_num)
+#                                 gt_col_nums.insert(i_num, i_num)
+                    if len(ideal_gt_col_nums) == len(gt_col_nums) and (i_num_ins>-1):
+                        logger.info(f"Вставлена колонка  {i_num_ins}, {str(srch_str_lst[i_num_ins][0])}")
+                        # print(f"find_rec_pd_by_col_names_02:", row_num, gt_col_nums, col_names, col_nums)
+                        return row_num, gt_col_nums, col_names, col_nums
+            else:
+                return row_num, gt_col_nums, col_names, col_nums
+    return row_num, gt_col_nums, col_names, col_nums
+# new version  25.01.2023    
+def find_rec_pd_by_col_names_02_00(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
     row_num = None
     fl_found = False
     fl_incorrect_found = False
