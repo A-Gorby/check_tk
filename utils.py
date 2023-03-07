@@ -277,6 +277,7 @@ def find_rec_pd_by_col_names_02(file_name, df, chunk, srch_str_lst, main_cols, p
     cols_found_incorrect = []
     cols_num_found_incorrect = []
     result_cols = []
+    gt_col_nums = []
     sections = ['Услуги', 'ЛП', 'РМ']
     for i, row in df.iterrows():
         # if i <24: continue
