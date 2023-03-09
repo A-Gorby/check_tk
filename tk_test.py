@@ -872,8 +872,6 @@ def run_check_TK_00(data_source_dir, data_processed_dir, fn, sheet_name,
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
     
-    
-
 def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
     df_tk_description = pd.read_excel(os.path.join(data_root_dir, fn_tk_desc))
@@ -923,7 +921,7 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         except Exception as err:
             logger.error(f"Файл '{fn}'")
             logger.error(f"Лист '{sheet_name}'")
-            logger.error(f"Не обработан из-за ошибкиЖ '{err}'")
+            logger.error(f"Не обработан из-за ошибки: '{err}'")
             
         if i == 0: 
             df_total = df_chunks
@@ -1037,6 +1035,7 @@ def run_check_by_desc_01(data_root_dir, fn_tk_desc, data_source_dir, data_proces
 
     return fn_save, fm_stat_save
 
+
 def run_check_by_files(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
     df_total = [None, None, None]
@@ -1045,7 +1044,7 @@ def run_check_by_files(data_source_dir, data_processed_dir,
     
     fn_lst = os.listdir(data_source_dir)
     k = 0
-    
+    fn_processed = []
     for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
     
         if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xls' not in fn.lower(): 
@@ -1060,7 +1059,9 @@ def run_check_by_files(data_source_dir, data_processed_dir,
         xl_sheet_names = xl.sheet_names  # see all sheet names
         # print(fn, xl_sheet_names)
         logger.info(f"Файл: '{fn}'")
-        logger.info(f"Лист: {str(xl_sheet_names)}")
+        logger.info(f"Листы: {str(xl_sheet_names)}")
+        fn_processed.append([fn, False])
+        
         for sheet_name in xl_sheet_names:
 
             df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
@@ -1075,6 +1076,7 @@ def run_check_by_files(data_source_dir, data_processed_dir,
             if print_debug_main: 
                 print()
                 print(fn, sheet_name)
+            df_chunks = [None, None, None]
             try:
                 df_chunks = run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
                      tk_code, tk_profile, tk_name, patient_model,
@@ -1083,7 +1085,7 @@ def run_check_by_files(data_source_dir, data_processed_dir,
             except Exception as err:
                 logger.error(f"Файл '{fn}'")
                 logger.error(f"Лист '{sheet_name}'")
-                logger.error(f"Не обработан из-за ошибкиЖ '{err}'")
+                logger.error(f"Не обработан из-за ошибки: '{err}'")
                 
             if df_chunks[0] is None : continue
             
@@ -1093,9 +1095,12 @@ def run_check_by_files(data_source_dir, data_processed_dir,
                 for ii, df_chunk in enumerate(df_chunks):
                     df_total[ii] = pd.concat([df_total[ii], df_chunk])
             k += 1
+            
+            
             if df_chunks[0] is not None:
                 stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                      df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
+                fn_processed[-1][1] = True # fn_processed.append([fn, False])
             else:
                 stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                      0, 0, 0])
@@ -1108,10 +1113,10 @@ def run_check_by_files(data_source_dir, data_processed_dir,
         # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
         # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
         df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
+        df_stat_tk_files = pd.DataFrame(fn_processed, columns = ['Файл', 'Обработан'])
 
-
-        fm_stat_save = save_to_excel([df_stat_tk], 
-                      ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+        fm_stat_save = save_to_excel([df_stat_tk, df_stat_tk_files], 
+                      ['Shapes', 'Files'], data_processed_dir, 'tkbd_check_stat.xlsx')
     else: 
         fn_save = None
         fm_stat_save = None
@@ -1121,7 +1126,6 @@ def run_check_by_files(data_source_dir, data_processed_dir,
     logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
     
     return fn_save, fm_stat_save
-
 
 def run_check_by_files_01(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
