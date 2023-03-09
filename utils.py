@@ -451,6 +451,72 @@ def find_rec_pd_by_col_names_02_w(file_name, df, chunk, srch_str_lst, main_cols,
                 return row_num, gt_col_nums, col_names, col_nums
     return row_num, gt_col_nums, col_names, col_nums
 
+# def test_extract_chunk_positions(df_tk, j, print_debug = False, print_debug_main = False):
+def test_extract_chunk_positions_02(file_name, df_tk, print_debug = False, print_debug_main = False):
+    chunk_positions = [[None, None, None, None, None], [None, None, None, None, None], [None, None, None, None, None]]
+    rec_num_0 = None
+    # all_cols_found = [True, True, True] # по коли-ву обрбатываемых сейчас чанков
+    all_cols_found = True
+    cols_are_duplicated = False
+    for j in range(6): # на всякий случай бывает что не бывает лечнбного питания лиеты после МИ 
+        # проверяем наличие заголовков других блоков данных
+        if print_debug: 
+            print("chunk:", j)
+        rec_num_0 = find_rec_pd(df_tk, data_chunks[j], print_debug=print_debug)
+        if rec_num_0 is not None:
+            pass
+            if print_debug: print(rec_num_0)
+        else:
+            rec_num_0 = find_rec_pd(df_tk, data_chunks_alter[j], print_debug=print_debug)
+            if rec_num_0 is not None:
+                pass
+                if print_debug: print(rec_num_0)
+            else:
+                rec_num_0 = find_rec_pd(df_tk, data_chunks_alter_02[j], print_debug=print_debug)
+                if rec_num_0 is not None:
+                    pass
+                    if print_debug: print(rec_num_0)
+        if rec_num_0 is not None:
+            if (j>0) and (j<3):
+                chunk_positions[j-1][1]= rec_num_0
+                # try:
+                #     chunk_positions[j-1][1]= rec_num_0
+                # except Exception as err:
+                #     print(err, "chunk_positions[j-1][1]= rec_num_0", j, chunk_positions)
+                #     sys.exit(2)
+            elif j>=3:
+                if chunk_positions[2][1] is None:
+                    chunk_positions[2][1] = rec_num_0
+                
+            
+        if j <3:
+            row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums = \
+                find_rec_pd_by_col_names_04(file_name, df_tk, j, cols_chunks_02[j], main_cols[j], print_debug = print_debug)
+            # if print_debug_main:
+            #     print(f"test_extract_chunk_positions: chunk: {j}, row_num: {row_num}, gt_col_nums: {gt_col_nums}, col_names: {col_names}, col_nums: {col_nums}")
+            # print(f"test_extract_chunk_positions: chunk: {j} row_num, gt_col_nums, col_names, col_nums", row_num, gt_col_nums, col_names, col_nums)
+            if len (gt_col_nums) < len (cols_chunks_02[j]):
+                # print(f"test_extract_chunk_positions: chunk: {j} ->len (gt_col_nums) < len (cols_chunks_02[j])")
+                all_cols_found = False
+            if (len (col_nums) > len (cols_chunks_02[j])) or (len(gt_col_nums) > len(set(gt_col_nums))):
+                # the columns are duplicated
+                cols_are_duplicated = True
+            if row_num is not None:
+                chunk_positions[j][0] = row_num+1
+                chunk_positions[j][2] = col_nums
+                chunk_positions[j][3] = gt_col_nums
+                chunk_positions[j][4] = not_found_cols_nums
+                if j>0 and chunk_positions[j-1][1] is None:
+                    chunk_positions[j-1][1] = row_num
+            if print_debug: print()
+            if print_debug: 
+                # print("chunk:", j)
+                print(row_num, gt_col_nums, col_names, col_nums)
+
+    
+    
+    return chunk_positions, all_cols_found, cols_are_duplicated
+
 # new version
 def test_extract_chunk_positions(file_name, df_tk, print_debug = False, print_debug_main = False):
     chunk_positions = [[None, None, None, None], [None, None, None, None], [None, None, None, None]]

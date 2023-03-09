@@ -334,7 +334,182 @@ def check_row(chunk_num, row_values, cols_num):
     
     return rez_code_row, rez_code_values, #rez_message
 
-def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
+def extract_significant_cols(fn, df_tk, chunk_positions, print_debug = False, print_debug_main = False):
+    significant_col_nums = []
+    col_nums = chunk_positions[2]
+    start_row_num = chunk_positions[0]-1 if chunk_positions[0]>0 else 0
+    row_values = df_tk.iloc[start_row_num].values
+    if print_debug_main: print(f"extract_significant_cols: row_values: {row_values}")
+    significant_col_nums = [i for i,_ in enumerate(row_values)]
+    
+    return significant_col_nums
+
+# chunks_positions
+# [[39, 148, [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7], []], [150, 227, [1, 3, 4, 5, 6, 7], [1, 3, 4, 5, 6, 7], [0, 2]], [229, 347, [0, 1, 2, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6], []]]
+def try_insert_columns(fn, df_tk, 
+           chunks_positions, all_cols_found, cols_are_duplicated,
+           print_debug = False, print_debug_main = False):
+    # На входе all_cols_found is not True 
+    for i_chunk, chunk_positions in  enumerate(chunks_positions):
+        # gt_columns_not_found = chunk_positions[4]
+        if len (chunk_positions[4])>0:
+            significant_col_nums = extract_significant_cols(fn, df_tk, chunk_positions, print_debug = False, print_debug_main = False)
+            if print_debug_main: print(f"try_insert_columns: i_chunk: {i_chunk}, significant_col_nums: {significant_col_nums}")
+            if len(significant_col_nums) == len(cols_chunks_02[i_chunk]): 
+                # хороший случай - все заполненые навзание по по кол-ву соответсвуют кол-ву колонок в gt_cols_chunks[i_chunk]
+                chunks_positions[i_chunk][2] = significant_col_nums
+                chunks_positions[i_chunk][4] = []
+                all_cols_found = True
+            else: 
+                print(f"len(significant_col_nums) <> len(gt_cols_chunks[i_chunk])")
+                
+    return chunks_positions, all_cols_found, cols_are_duplicated
+
+def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
+         tk_profile, tk_code, tk_name, patient_model,
+         exit_at_not_all_cols = False,
+         print_debug = False, print_debug_main = True):
+    
+    head_cols = ['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента', 'Файл Excel', 'Название листа в файле Excel']
+    df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
+    j = 0
+    # chunks_positions = test_extract_chunk_positions(df_tk, j, print_debug = print_debug, print_debug_main = print_debug_main)
+    chunks_positions, all_cols_found, cols_are_duplicated = test_extract_chunk_positions_02(fn, df_tk, print_debug = print_debug, print_debug_main = print_debug_main)
+    chunks_positions_flat = [item for sublist in chunks_positions for item in sublist[:2]]
+    if print_debug_main: 
+        print("chunks_positions after test_extract_chunk_positions:", chunks_positions)
+        print("all_cols_found, cols_are_duplicated", all_cols_found, cols_are_duplicated)
+        print("chunks_positions_flat:", chunks_positions_flat)
+    
+    if not all_cols_found:
+        chunks_positions, all_cols_found, cols_are_duplicated = try_insert_columns(fn, df_tk, 
+                       chunks_positions, all_cols_found, cols_are_duplicated,
+                       print_debug = print_debug, print_debug_main = print_debug_main)
+        if print_debug_main: print(f"run_check_TK_02: after try_insert_columns: chunks_positions: {chunks_positions}, all_cols_found: {all_cols_found}, cols_are_duplicated: {cols_are_duplicated}")
+        if all_cols_found:
+            logger.info(f"Лист '{sheet_name}':")
+            logger.info(f"Недостающие колонки переопределены")
+            
+    if None in chunks_positions_flat or not all_cols_found or cols_are_duplicated: 
+        if print_debug_main:
+        # print(f"{fn}, {sheet_name}: Error: didn't all chunks positions find")
+            logger.error(f"File: {fn}")
+            logger.error(f"Sheet: {sheet_name}: Error: didn't find all chunks positions or all columns")
+            logger.info(f"chunks_positions_flat: {chunks_positions_flat}")
+            logger.info(f"all_cols_found: {all_cols_found}")
+        if cols_are_duplicated:
+            sections = ['Услуги', 'ЛП', 'РМ']
+            section_cols_duplicated = []
+            for j, (_, _, col_nums, gt_col_nums) in enumerate(chunks_positions):
+                if (len (col_nums) > len (cols_chunks_02[j])) or (len(gt_col_nums) > len(set(gt_col_nums))):
+                    section_cols_duplicated.append(sections[j])
+                    
+            logger.error(f"Колонки задублированы в разделах: '{', '.join(section_cols_duplicated)}'")
+        if chunks_positions_flat[0] is None:
+            # logger.info(f"Not found chunk: Услуги")
+            logger.error(f"Не найден раздел: Услуги")
+        if chunks_positions_flat[1] is None:
+            # logger.info(f"Not found chunk: Услуги")
+            logger.error(f"Не найдено завершение раздела: Услуги")
+        if chunks_positions_flat[2] is None:
+            logger.error(f"Не найден раздел: ЛП")
+        if chunks_positions_flat[3] is None:
+            logger.error(f"Не найден завершение раздела: ЛП")
+        if chunks_positions_flat[4] is None:
+            logger.error(f"Не найден раздел: МИ/РМ")
+        if chunks_positions_flat[5] is None:
+            logger.error(f"Не найден завершение раздела: МИ/РМ")
+        
+        if exit_at_not_all_cols:
+            logger.info("Обработка завершена")
+            sys.exit(2)
+        else:
+            # logger.info(f"Файл '{fn}'")
+            logger.error(f"Обработка листа '{sheet_name}' производиться не будет")
+            return [None, None, None]
+    else: 
+
+        if print_debug_main: print("chunks_positions:", chunks_positions)
+        df_chunks  = read_chunks(data_source_dir, fn, sheet_name, chunks_positions, print_debug=print_debug)
+        for i, df_chunk in enumerate(df_chunks):
+            if print_debug_main: print("run_check_TK: chunk:", i, "process started")
+            chunk_num = i
+            cols_num = chunks_positions[i][2]
+            err_msg_lst_flat = [item for sl in err_msg_lst[i] for item in sl]
+            # if i ==2: #continue
+            #     display(df_chunk.head(3))
+            for j, row in df_chunk.iterrows():
+                # if chunk_num==2: print(j, "row:", row)
+                rez_code_row, rez_code_values = check_row(i, row.values, cols_num) #, debug=print_debug_main)
+                # cols_num не актуально, т.к. в chunk-е все уже попорядку
+                
+                # rez_code_values_np = np.array([np.array(sublst, dtype=int) for sublst in rez_code_values], dtype=list)
+                # rez_code_values_np = np.array([sublst for sublst in rez_code_values], dtype=list)
+                # rez_code_values_np = rez_code_values
+                flat_rez_code_values = [r for sl in rez_code_values for r in sl]
+                flat_rez_code_values_inv = [0 if v ==1 else 1 for v in flat_rez_code_values]
+                # print(flat_rez_code_values)
+                # rez_code_values_np = np.array(rez_code_values, dtype=list)
+                # rez_code_values_np = np.array(flat_rez_code_values, dtype=int)
+                # rez_code_values_np = flat_rez_code_values
+                rez_code_values_np = np.array(rez_code_values, dtype=object)
+                flat_rez_code_values_np = np.array(flat_rez_code_values_inv, dtype=object)
+                # flat_rez_code_values_np_inv = [0 if v==1 else 1 for v in flat_rez_code_values ]
+
+                err_messages = get_err_messages(rez_code_values, err_msg_lst[chunk_num])
+                err_messages_np = [np.array(sl, dtype=object) for sl in err_messages]
+                # df_chunk.loc[j, ['rez_code_row', 'rez_code_values']] = np.array([check_row(i, row.values, cols_num)], dtype = object)
+                # df_chunk.loc[j, ['rez_code_row', 'rez_code_values' ]] = dict(zip(['rez_code_row','rez_code_values'],[rez_code_row, rez_code_values_np]))
+                # df_chunk.loc[j, ['rez_code_row', 'rez_code_values', 'rez_code_values_flat' ]] = \
+                # dict(zip(['rez_code_row','rez_code_values', 'rez_code_values_flat'],[rez_code_row, rez_code_values_np, flat_rez_code_values_np]))
+                
+                try:
+                    # df_chunk.loc[j, ['rez_code_row', 'rez_code_values' ]] = \
+                    #         rez_code_row, rez_code_values_np
+                    # dict(zip(['rez_code_row','rez_code_values'],[rez_code_row, rez_code_values_np]))
+                        # dict(zip(['rez_code_row','rez_code_values'],[rez_code_row, flat_rez_code_values_np]))
+                    df_chunk.loc[j, 'rez_code_row',] = rez_code_row
+                    # df_chunk.loc[j, 'rez_code_values'] = rez_code_values_np
+                    # df_chunk.loc[j, 'rez_code_values'] = {'rez_code_values':  np.asarray(rez_code_values_np)}
+                    df_chunk.loc[j, 'rez_code_values'] = str(rez_code_values_np)
+                    
+                except Exception as err:
+                    print(j, err, f"rez_code_row : {rez_code_row}, rez_code_values_np: {rez_code_values_np}" ) # , flat_rez_code_values_np: {flat_rez_code_values_np}")
+                # print(err_msg_lst_flat)
+                # print(flat_rez_code_values)
+                try:
+                    df_chunk.loc[j, err_msg_lst_flat] = dict(zip(err_msg_lst_flat, flat_rez_code_values_inv))
+                except Exception as err:
+                    print(j, err, f"err_msg_lst_flat: {err_msg_lst_flat}, flat_rez_code_values_inv: {flat_rez_code_values_inv}")
+                # df_chunk.loc[j, ['err_messages' ]] = dict(zip(['err_messages'],err_messages_np))
+                # df_chunk.loc[j, 'err_messages' ] = np.array(err_messages_np, dtype=object)
+                # df_chunk.loc[j, 'err_messages' ] = err_messages
+                # df_chunk.loc[j, ['rez_code_row', 'rez_code_values', 'err_messages']] = \
+                #         [rez_code_row, rez_code_values, err_messages]
+                # df_chunk.loc[j, 'rez_code_row'] = rez_code_row
+                # df_chunk.loc[j, 'rez_code_values'] = {'rez_code_values': rez_code_values_np}
+                # df_chunk.loc[j, 'err_messages'] = err_messages
+                # dict({'rez_code_row':rez_code_row, 'rez_code_values':rez_code_values, 'err_messages':err_messages})
+            # df_chunk[['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента']] = tk_profile, tk_code, tk_name, patient_model
+            df_chunk['Профиль'] = tk_profile
+            df_chunk['Код ТК'] = tk_code
+            df_chunk['Наименование ТК'] = tk_name
+            df_chunk['Модель пациента'] = patient_model
+            df_chunk['Файл Excel'] = fn
+            df_chunk['Название листа в файле Excel'] = sheet_name
+            df_chunk_columns = list(df_chunk.columns)
+            for col in head_cols:
+                df_chunk_columns.remove(col)
+            df_chunks[i] = df_chunk[head_cols + df_chunk_columns]
+        
+        logger.info(f"Обработка листа '{sheet_name}' завершена")
+
+    # fn_save = save_to_excel(df_chunks, total_sheet_names, path_tkbd_processed, 'test_' + fn)
+    # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
+    return df_chunks
+
+
+def run_check_TK_01a(data_source_dir, data_processed_dir, fn, sheet_name,
          tk_profile, tk_code, tk_name, patient_model,
          exit_at_not_all_cols = False,
          print_debug = False, print_debug_main = True):
@@ -469,7 +644,7 @@ def run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
 
-def run_check_TK_03(data_source_dir, data_processed_dir, fn, sheet_name,
+def run_check_TK_01(data_source_dir, data_processed_dir, fn, sheet_name,
          tk_profile, tk_code, tk_name, patient_model,
          exit_at_not_all_cols = False,
          print_debug = False, print_debug_main = True):
@@ -741,6 +916,90 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         #     print(fn, sheet_name)
         logger.info(f"Файл: '{fn}'")
         logger.info(f"Лист: {str(sheet_name)}")
+        try: 
+            df_chunks = run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
+                tk_code, tk_profile, tk_name, patient_model,
+                 print_debug = print_debug, print_debug_main = print_debug_main)
+        except Exception as err:
+            logger.error(f"Файл '{fn}'")
+            logger.error(f"Лист '{sheet_name}'")
+            logger.error(f"Не обработан из-за ошибкиЖ '{err}'")
+            
+        if i == 0: 
+            df_total = df_chunks
+        else:
+            for ii, df_chunk in enumerate(df_chunks):
+                df_total[ii] = pd.concat([df_total[ii], df_chunk])
+        # k += 1
+        if df_chunks[0] is not None:
+            stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
+                 df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
+        else:
+            stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
+                 0, 0, 0])
+
+    if df_total[0] is not None: 
+        # print(df_total[0].shape)
+        total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
+        # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
+        fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
+        # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
+        # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+        df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
+        fm_stat_save = save_to_excel([df_stat_tk], 
+                      ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+    else: 
+        fn_save = None
+        fm_stat_save = None
+    # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+    # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
+    logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
+    
+    return fn_save, fm_stat_save
+
+def run_check_by_desc_01(data_root_dir, fn_tk_desc, data_source_dir, data_processed_dir,
+                     print_debug = False, print_debug_main = True):
+    df_tk_description = pd.read_excel(os.path.join(data_root_dir, fn_tk_desc))
+    # df_tk_description.head(2)
+    head_cols = ['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента', 'Файл Excel', 'Название листа в файле Excel']
+    
+    # for i, fn in enumerate(fn_lst[12:13]):
+    df_total = [None, None, None]
+    stat_tk = []
+    # for i, fn in enumerate(fn_lst[:]):
+    for i, row in tqdm(df_tk_description.iterrows(), total=df_tk_description.shape[0]):
+        # if not os.path.isfile(os.path.join(path_tkbd_source_alter, fn)) or '.xlsx' not in fn.lower(): 
+        #     continue
+        if 'Файл Excel' in df_tk_description.columns:
+            fn = row['Файл Excel']
+        else:
+            logger.error('В описнаии нет названий файлов')
+            sys.exit(2)
+        if 'Название листа в файле Excel' in df_tk_description.columns:
+            sheet_name = row['Название листа в файле Excel']
+        else:
+            logger.error('В описнаии нет названий листов Excel')
+            sys.exit(2)
+        if 'Код' in df_tk_description.columns:
+            tk_code = row['Код']
+        else: tk_code = None
+        if 'Профиль' in df_tk_description.columns:
+            tk_profile = row['Профиль']
+        else: tk_profile = None
+        if 'Наименование' in df_tk_description.columns:
+            tk_name = row['Наименование']
+        else: tk_name = None
+        if 'Модель пациента' in df_tk_description.columns:
+            patient_model = row['Модель пациента']
+        else: patient_model = None
+        
+        
+        # if print_debug_main: 
+        #     print()
+        #     print(fn, sheet_name)
+        logger.info(f"Файл: '{fn}'")
+        logger.info(f"Лист: {str(sheet_name)}")
         df_chunks = run_check_TK(data_source_dir, data_processed_dir, fn, sheet_name,
             tk_code, tk_profile, tk_name, patient_model,
              print_debug = print_debug, print_debug_main = print_debug_main)
@@ -778,8 +1037,93 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
 
     return fn_save, fm_stat_save
 
-
 def run_check_by_files(data_source_dir, data_processed_dir,
+                     print_debug = False, print_debug_main = True):
+    df_total = [None, None, None]
+    stat_tk = []
+    head_cols = ['Профиль', 'Код ТК', 'Наименование ТК', 'Модель пациента', 'Файл Excel', 'Название листа в файле Excel']
+    
+    fn_lst = os.listdir(data_source_dir)
+    k = 0
+    
+    for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
+    
+        if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xls' not in fn.lower(): 
+            # logger.info(f"file '{fn}' not found or not xlsx-file")
+            logger.info(f"Файл '{fn}' не найден или не xls-файл")
+            continue
+        tk_profile = None
+        tk_code = None
+        tk_name = None #re.sub(r"^\d+\.", '', fn.split(' +')[0].replace('.xlsx','')).strip()
+        patient_model = None
+        xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
+        xl_sheet_names = xl.sheet_names  # see all sheet names
+        # print(fn, xl_sheet_names)
+        logger.info(f"Файл: '{fn}'")
+        logger.info(f"Лист: {str(xl_sheet_names)}")
+        for sheet_name in xl_sheet_names:
+
+            df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
+
+            # print(k, sheet_name)
+            logger.info(f"{k}: {sheet_name}")
+    
+            # logger.error('В описнаии нет названий листов Excel')
+            # sys.exit(2)
+        
+        
+            if print_debug_main: 
+                print()
+                print(fn, sheet_name)
+            try:
+                df_chunks = run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
+                     tk_code, tk_profile, tk_name, patient_model,
+                     exit_at_not_all_cols=False,
+                     print_debug = print_debug, print_debug_main = print_debug_main)
+            except Exception as err:
+                logger.error(f"Файл '{fn}'")
+                logger.error(f"Лист '{sheet_name}'")
+                logger.error(f"Не обработан из-за ошибкиЖ '{err}'")
+                
+            if df_chunks[0] is None : continue
+            
+            if k == 0: 
+                df_total = df_chunks
+            else:
+                for ii, df_chunk in enumerate(df_chunks):
+                    df_total[ii] = pd.concat([df_total[ii], df_chunk])
+            k += 1
+            if df_chunks[0] is not None:
+                stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
+                     df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
+            else:
+                stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
+                     0, 0, 0])
+
+    if df_total[0] is not None: 
+        print(df_total[0].shape)
+        total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
+        # fn_save = save_to_excel(df_total, total_sheet_names, path_tkbd_processed, 'tkbd.xlsx')
+        fn_save = save_to_excel(df_total, total_sheet_names, data_processed_dir, 'tkbd_check.xlsx')
+        # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
+        # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+        df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
+
+
+        fm_stat_save = save_to_excel([df_stat_tk], 
+                      ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+    else: 
+        fn_save = None
+        fm_stat_save = None
+    # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+    # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+    logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
+    logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
+    
+    return fn_save, fm_stat_save
+
+
+def run_check_by_files_01(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
     df_total = [None, None, None]
     stat_tk = []
