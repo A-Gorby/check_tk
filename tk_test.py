@@ -39,10 +39,10 @@ from manual_dictionaries import gt_cols_chunks, data_chunks, data_chunks_alter, 
 from manual_dictionaries import cols_chunks_02, main_cols, dtypes_chunks_dicts, dtypes_chunks_after_dict
 from manual_dictionaries import err_msg_lst
 
-from utils import find_rec_pd, find_col, find_rec_pd_by_col_names_02, test_extract_chunk_positions
+# from utils import find_rec_pd, find_col, find_rec_pd_by_col_names_02, test_extract_chunk_positions
 from utils import read_chunks, save_to_excel, load_check_dictionaries
 from utils import conv_str_lst_2_int_lst, transform_list_form_xlsx, add_check_comments
-from utils import find_rec_pd, find_col, find_rec_pd_by_col_names_02, read_chunks, test_extract_chunk_positions
+from utils import find_rec_pd, find_col, find_rec_pd_by_col_names_04, read_chunks, test_extract_chunk_positions_02
 from utils import print_err_messages, get_err_messages #, check_row
 # from utils import run_check_TK, run_check_by_desc, run_check_by_files
 
