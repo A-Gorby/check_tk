@@ -881,6 +881,7 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
     # for i, fn in enumerate(fn_lst[12:13]):
     df_total = [None, None, None]
     stat_tk = []
+    fn_processed = []
     # for i, fn in enumerate(fn_lst[:]):
     for i, row in tqdm(df_tk_description.iterrows(), total=df_tk_description.shape[0]):
         # if not os.path.isfile(os.path.join(path_tkbd_source_alter, fn)) or '.xlsx' not in fn.lower(): 
@@ -907,13 +908,14 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         if 'Модель пациента' in df_tk_description.columns:
             patient_model = row['Модель пациента']
         else: patient_model = None
-        
+        fn_processed.append([fn, False])
         
         # if print_debug_main: 
         #     print()
         #     print(fn, sheet_name)
         logger.info(f"Файл: '{fn}'")
         logger.info(f"Лист: {str(sheet_name)}")
+        df_chunks = [None, None, None]
         try: 
             df_chunks = run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
                 tk_code, tk_profile, tk_name, patient_model,
@@ -932,6 +934,7 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         if df_chunks[0] is not None:
             stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                  df_chunks[0].shape[0], df_chunks[1].shape[0], df_chunks[2].shape[0]])
+            fn_processed[-1][1] = True # fn_processed.append([fn, False])
         else:
             stat_tk.append( [tk_profile, tk_code, tk_name, patient_model, fn, sheet_name, 
                  0, 0, 0])
@@ -944,8 +947,12 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
         # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
         df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
-        fm_stat_save = save_to_excel([df_stat_tk], 
-                      ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+        # fm_stat_save = save_to_excel([df_stat_tk], 
+        #               ['Shapes'], data_processed_dir, 'tkbd_check_stat.xlsx')
+        df_stat_tk_files = pd.DataFrame(fn_processed, columns = ['Файл', 'Обработан'])
+
+        fm_stat_save = save_to_excel([df_stat_tk, df_stat_tk_files], 
+                      ['Shapes', 'Files'], data_processed_dir, 'tkbd_check_stat.xlsx')
     else: 
         fn_save = None
         fm_stat_save = None
