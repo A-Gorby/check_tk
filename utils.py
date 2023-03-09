@@ -268,8 +268,9 @@ def find_col_w(srch_cols_lst : list, # list of list
 
 # def find_rec_pd_by_col_names_03(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
 
-# new version 09.03.2023
-def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
+# new version 09.0.2023
+
+def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False, print_debug_main = False):
     row_num = None
     fl_found = False
     fl_incorrect_found = False
@@ -288,18 +289,19 @@ def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, p
         # if i >30: break
         fl_found = False
         # for j in range(3):
-        gt_col_nums, col_names, col_nums = find_col(srch_str_lst[main_cols[0]:main_cols[1]+1], row.values, print_debug)
+        # gt_col_nums, col_names, col_nums = find_col(srch_str_lst[main_cols[0]:main_cols[1]+1], row.values, print_debug)
+        gt_col_nums, col_nums, col_names = find_col(srch_str_lst[main_cols[0]:main_cols[1]+1], row.values, print_debug)
         # print(i, gt_col_num, col_name, col_num)
         if len(gt_col_nums)>0: # # найдены основные колонки
             fl_found = True
-            if print_debug: print(i, gt_col_nums, col_names, col_nums)
+            if print_debug_main: print("найдены основные колонки:", i, gt_col_nums, col_names, col_nums)
                 # break
         else: # еще одна поптыка найтипо ключевым словам
             pass
             
         if fl_found:  # найдены оснвоыне колокни
             # теперь ищем все сотальные колокни
-            gt_col_nums, col_nums, col_names = find_col(srch_str_lst, row.values, print_debug)
+            gt_col_nums, col_nums, col_names  = find_col(srch_str_lst, row.values, print_debug)
             if len(gt_col_nums)>0: # is not None:
                 fl_found = True
                 row_num = i
@@ -314,6 +316,8 @@ def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, p
                 logger.info(f"Раздел: {sections[chunk]}, строка {i}: не найдены все названия колонок, а именно:"+\
                            f" {str(not_found_cols_nums)}, {str(not_found_cols_names)}")
                   # list(np.array(srch_str_lst)[:,0]).index(not_found_cols_nums))
+                if print_debug_main:
+                    print(f"find_rec_pd_by_col_names_04: chunk: {chunk}, gt_col_nums: {gt_col_nums}, col_nums: {col_nums}")
                 
                 ideal_gt_col_nums = list(range(len(srch_str_lst)))
                 num_diff = len(ideal_gt_col_nums) - len(gt_col_nums)
@@ -323,7 +327,12 @@ def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, p
                         if i_num not in gt_col_nums:
                             if (i_num == 0) or (i_num==ideal_gt_col_nums[-1]): # work cersion
                             # if (i_num >= 0) and (i_num<=ideal_gt_col_nums[-1]):
-                                col_nums.insert(i_num, i_num)
+                                if print_debug_main: 
+                                    print(f"find_rec_pd_by_col_names_04: 'if (i_num == 0) or (i_num==ideal_gt_col_nums[-1])', i_num: {i_num}, gt_col_nums: {gt_col_nums}")
+                                if (i_num == 0):
+                                    col_nums.insert(i_num, i_num)
+                                elif (i_num==ideal_gt_col_nums[-1]): # добавляем № последней колонки+1
+                                    col_nums.append(col_nums[-1]+1)
                                 gt_col_nums.insert(i_num, i_num)
                                 i_num_ins = i_num
                                 col_names.insert(i_num, srch_str_lst[i_num_ins][0])
@@ -342,10 +351,10 @@ def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, p
 #                                 gt_col_nums.insert(i_num, i_num)
                     if len(ideal_gt_col_nums) == len(gt_col_nums) and (i_num_ins>-1):
                         logger.info(f"Вставлена колонка  {i_num_ins}, {str(srch_str_lst[i_num_ins][0])}")
-                        # print(f"find_rec_pd_by_col_names_02:", row_num, gt_col_nums, col_names, col_nums)
-                        return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums
-                    else:
-                        return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums
+                    #     # print(f"find_rec_pd_by_col_names_02:", row_num, gt_col_nums, col_names, col_nums)
+                    #     return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums
+                    # else:
+                    return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums
                 else:
                     return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums
             else:
@@ -353,9 +362,8 @@ def find_rec_pd_by_col_names_04(file_name, df, chunk, srch_str_lst, main_cols, p
     if len(gt_col_nums)==0:
         logger.info(f"file: {file_name}") 
         logger.info(f"Раздел: {sections[chunk]}, не найдены основные колоноки")
-    return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums
+    return row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums# new version 16.02.2023
 
-# new version 16.02.2023
 def find_rec_pd_by_col_names_02(file_name, df, chunk, srch_str_lst, main_cols, print_debug = False):
     row_num = None
     fl_found = False
@@ -542,7 +550,7 @@ def find_rec_pd_by_col_names_02_w(file_name, df, chunk, srch_str_lst, main_cols,
 
 # def test_extract_chunk_positions(df_tk, j, print_debug = False, print_debug_main = False):
 def test_extract_chunk_positions_02(file_name, df_tk, print_debug = False, print_debug_main = False):
-    chunk_positions = [[None, None, None, None, None], [None, None, None, None, None], [None, None, None, None, None]]
+    chunk_positions = [[None, None, None, None, None, None], [None, None, None, None, None, None], [None, None, None, None, None, None]]
     rec_num_0 = None
     # all_cols_found = [True, True, True] # по коли-ву обрбатываемых сейчас чанков
     all_cols_found = True
@@ -580,12 +588,14 @@ def test_extract_chunk_positions_02(file_name, df_tk, print_debug = False, print
             
         if j <3:
             row_num, gt_col_nums, col_names, col_nums, not_found_cols_nums = \
-                find_rec_pd_by_col_names_04(file_name, df_tk, j, cols_chunks_02[j], main_cols[j], print_debug = print_debug)
+                find_rec_pd_by_col_names_04(file_name, df_tk, j, cols_chunks_02[j], main_cols[j], print_debug = print_debug, print_debug_main=print_debug_main)
             # if print_debug_main:
             #     print(f"test_extract_chunk_positions: chunk: {j}, row_num: {row_num}, gt_col_nums: {gt_col_nums}, col_names: {col_names}, col_nums: {col_nums}")
             # print(f"test_extract_chunk_positions: chunk: {j} row_num, gt_col_nums, col_names, col_nums", row_num, gt_col_nums, col_names, col_nums)
             if len (gt_col_nums) < len (cols_chunks_02[j]):
-                # print(f"test_extract_chunk_positions: chunk: {j} ->len (gt_col_nums) < len (cols_chunks_02[j])")
+                if print_debug_main:
+                    print(f"test_extract_chunk_positions: chunk: {j} ->len (gt_col_nums) < len (cols_chunks_02[j])")
+                    print(f"test_extract_chunk_positions: chunk: {j} gt_col_nums : {gt_col_nums},  len (cols_chunks_02[j]): {len (cols_chunks_02[j])}")
                 all_cols_found = False
             if (len (col_nums) > len (cols_chunks_02[j])) or (len(gt_col_nums) > len(set(gt_col_nums))):
                 # the columns are duplicated
@@ -595,6 +605,7 @@ def test_extract_chunk_positions_02(file_name, df_tk, print_debug = False, print
                 chunk_positions[j][2] = col_nums
                 chunk_positions[j][3] = gt_col_nums
                 chunk_positions[j][4] = not_found_cols_nums
+                chunk_positions[j][5] = col_names
                 if j>0 and chunk_positions[j-1][1] is None:
                     chunk_positions[j-1][1] = row_num
             if print_debug: print()
@@ -604,9 +615,8 @@ def test_extract_chunk_positions_02(file_name, df_tk, print_debug = False, print
 
     
     
-    return chunk_positions, all_cols_found, cols_are_duplicated
+    return chunk_positions, all_cols_found, cols_are_duplicated# new version
 
-# new version
 def test_extract_chunk_positions(file_name, df_tk, print_debug = False, print_debug_main = False):
     chunk_positions = [[None, None, None, None], [None, None, None, None], [None, None, None, None]]
     rec_num_0 = None
@@ -783,30 +793,42 @@ def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=
             dtype =  dtypes_chunks_dicts[i]
         )
         df_chunk = df_chunks[i]
-        next_col = list(df_chunk.columns)[list(df_chunk.columns).index('№ п/п')+1]
-        if print_debug: print("next_col:", next_col)
-        # Согласовано
-        df_chunk = df_chunk[~( ((df_chunk['№ п/п']=='nan') & \
-                    df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I ))\
-                  | df_chunk['№ п/п'].str.contains(r"Согласовано", regex=True, flags= re.I)\
-                  | df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I))] # ,case = False
-        df_chunk = df_chunk[~( (df_chunk['№ п/п'].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
-                    | df_chunk['№ п/п'].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I)\
-                    | df_chunk['№ п/п'].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I)\
-                    | df_chunk[next_col].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
-                    | df_chunk[next_col].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I) \
-                    | df_chunk[next_col].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I))) ]
-        df_chunk_columns = list(df_chunk.columns)
-        next_check_cols = df_chunk_columns[df_chunk_columns.index('№ п/п')+2:-1] # 'ФИО ГВС'
-        if print_debug_main: print(next_check_cols)
-        mask_check_cols_isnan = df_chunk[next_check_cols[0]].isnull()
-        for col in next_check_cols[1:]:
-            mask_check_cols_isnan = mask_check_cols_isnan & df_chunk[col].isnull()
-        df_chunk = df_chunk[~(mask_check_cols_isnan)]
+        if print_debug_main:
+            print(f"read_chunks: chunk: {i}, df_chunk.columns: {df_chunk.columns}")
+        col_npp_name = chunk_positions[5][0]
+        if not(col_npp_name is not None or ((type (col_npp_name)==float) and np.isnan(col_npp_name))):
+            # next_col = list(df_chunk.columns)[list(df_chunk.columns).index('№ п/п')+1]
+            next_col = list(df_chunk.columns)[list(df_chunk.columns).index(col_npp_name)+1]
+            if print_debug: print("next_col:", next_col)
+            # Согласовано
+            # df_chunk = df_chunk[~( ((df_chunk['№ п/п']=='nan') & \
+            df_chunk = df_chunk[~( ((df_chunk[col_npp_name]=='nan') & \
+                        df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I ))\
+                      | df_chunk[col_npp_name].str.contains(r"Согласовано", regex=True, flags= re.I)\
+                      | df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I))] # ,case = False
+            # df_chunk = df_chunk[~( (df_chunk['№ п/п'].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
+            #             | df_chunk['№ п/п'].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I)\
+            #             | df_chunk['№ п/п'].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I)\
+            df_chunk = df_chunk[~( (df_chunk[col_npp_name].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
+                        | df_chunk[col_npp_name].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I)\
+                        | df_chunk[col_npp_name].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I)\
+                        | df_chunk[next_col].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
+                        | df_chunk[next_col].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I) \
+                        | df_chunk[next_col].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I))) ]
+            df_chunk_columns = list(df_chunk.columns)
+            # next_check_cols = df_chunk_columns[df_chunk_columns.index('№ п/п')+2:-1] # 'ФИО ГВС'
+            next_check_cols = df_chunk_columns[df_chunk_columns.index(col_npp_name)+2:-1] # 'ФИО ГВС'
+            if print_debug_main: print(next_check_cols)
+            mask_check_cols_isnan = df_chunk[next_check_cols[0]].isnull()
+            for col in next_check_cols[1:]:
+                mask_check_cols_isnan = mask_check_cols_isnan & df_chunk[col].isnull()
+            df_chunk = df_chunk[~(mask_check_cols_isnan)]
 
-        df_chunks[i] = df_chunk
+            df_chunks[i] = df_chunk
+                                            
         for k,v in dtypes_chunks_after_dict[i].items():
             if print_debug: print(f"{k}->{v}")
+            # df_chunks[i][k] = df_chunks[i][k].apply( lambda x: str(x).replace(',', '.'))
             df_chunks[i][k] = df_chunks[i][k].apply( lambda x: str(x).replace(',', '.'))
             try:
                 df_chunks[i][k] = df_chunks[i][k].astype(v)
@@ -819,7 +841,7 @@ def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=
         # print(i, len(df_chunks[i].columns), df_chunks[i].columns)
         # print(len (gt_cols_chunks[i][1:len(cols_chunks_02[i])+1]), gt_cols_chunks[1:len(cols_chunks_02[i])])
     return df_chunks #[0], df_chunk[1], df_chunk[2]
-
+    
 total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
 def save_to_excel(df_total, total_sheet_names, save_path, fn):
     # fn = model + '.xlsx'

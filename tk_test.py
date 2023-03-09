@@ -57,9 +57,14 @@ def check_point_in_value(val):
     return 1
     # return True
 def check_code_MGFOMS(val):
-    if df_services_MGFOMS.query(f"code == '{val}'").shape[0] >0: 
-        return 1
-    else: return 0
+    try:
+        if df_services_MGFOMS.query(f"code == '{val}'").shape[0] >0: 
+            return 1
+        else: return 0
+    except:
+        # как вариант ValueError: multi-line expressions are only valid in the context of data, use DataFrame.eval
+        return 0
+
 def check_code_804n(val):
     # print(f"check_code_804n: {type(val)}, val: {val}") 
     try:
@@ -297,6 +302,8 @@ check_functions_lst =[
     
 ]
 
+
+
 def check_row(chunk_num, row_values, cols_num):
     rez_code_row, rez_message = True, None
     rez_code_values = []
@@ -341,28 +348,61 @@ def extract_significant_cols(fn, df_tk, chunk_positions, print_debug = False, pr
     row_values = df_tk.iloc[start_row_num].values
     if print_debug_main: print(f"extract_significant_cols: row_values: {row_values}")
     significant_col_nums = [i for i,_ in enumerate(row_values)]
+    significant_col_names = list(row_values)
     
-    return significant_col_nums
+    return significant_col_nums, significant_col_names
 
 # chunks_positions
-# [[39, 148, [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7], []], [150, 227, [1, 3, 4, 5, 6, 7], [1, 3, 4, 5, 6, 7], [0, 2]], [229, 347, [0, 1, 2, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6], []]]
+# [[39, 148, [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7], [], col_names], [150, 227, [1, 3, 4, 5, 6, 7], [1, 3, 4, 5, 6, 7], [0, 2], col_names], [229, 347, [0, 1, 2, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6], [], col_names]]
 def try_insert_columns(fn, df_tk, 
            chunks_positions, all_cols_found, cols_are_duplicated,
            print_debug = False, print_debug_main = False):
     # На входе all_cols_found is not True 
     for i_chunk, chunk_positions in  enumerate(chunks_positions):
-        # gt_columns_not_found = chunk_positions[4]
-        if len (chunk_positions[4])>0:
-            significant_col_nums = extract_significant_cols(fn, df_tk, chunk_positions, print_debug = False, print_debug_main = False)
+        gt_columns_not_found = chunk_positions[4]
+        if len (gt_columns_not_found)>0:
+            significant_col_nums, significant_col_names = extract_significant_cols(fn, df_tk, chunk_positions, print_debug = False, print_debug_main = False)
             if print_debug_main: print(f"try_insert_columns: i_chunk: {i_chunk}, significant_col_nums: {significant_col_nums}")
             if len(significant_col_nums) == len(cols_chunks_02[i_chunk]): 
                 # хороший случай - все заполненые навзание по по кол-ву соответсвуют кол-ву колонок в gt_cols_chunks[i_chunk]
                 chunks_positions[i_chunk][2] = significant_col_nums
+                chunks_positions[i_chunk][3] = list(range(len(cols_chunks_02[i_chunk]))) 
                 chunks_positions[i_chunk][4] = []
+                chunks_positions[i_chunk][5] = significant_col_names
                 all_cols_found = True
             else: 
-                print(f"len(significant_col_nums) <> len(gt_cols_chunks[i_chunk])")
-                
+                col_nums_real = []
+                col_names_real = []
+                col_nums = chunk_positions[2]
+                gt_col_nums = chunk_positions[3]
+                col_names = chunk_positions[5]
+                gt_col_nums_ideal = list(range(len(cols_chunks_02[i_chunk])))
+                if print_debug_main:
+                    print(f"try_insert_columns: len(significant_col_nums) <> len(gt_cols_chunks[i_chunk])")
+                    print(f"try_insert_columns: col_nums: {col_nums}, gt_col_nums_ideal: {gt_col_nums_ideal}")
+                if gt_col_nums[0] == 0: # найденные нужные колонки начинаются с 0, с самой первой
+                    start_col_num = col_nums[0]
+                    if print_debug_main:
+                        print(f"try_insert_columns: start_col_num: {start_col_num}, col_nums: {col_nums}, gt_col_nums_ideal: {gt_col_nums_ideal}")
+                    i_col_cnt = 0
+                    for i_col, gt_col_num_ideal in enumerate(gt_col_nums_ideal):
+                        if gt_col_num_ideal in gt_columns_not_found:
+                            col_nums_real.append(significant_col_nums[start_col_num + gt_col_num_ideal]) 
+                            col_names_real.append(significant_col_names[start_col_num + gt_col_num_ideal]) 
+                            
+                        else:
+                            # print(f"i_col: {i_col}")
+                            col_nums_real.append(col_nums[i_col_cnt])
+                            col_names_real.append(col_names[i_col_cnt])
+                            i_col_cnt += 1
+                        
+                    chunks_positions[i_chunk][2] = col_nums_real
+                    chunks_positions[i_chunk][3] = gt_col_nums_ideal
+                    chunks_positions[i_chunk][4] = []
+                    chunks_positions[i_chunk][5] = col_names_real
+                    all_cols_found = True
+                else:
+                    pass
     return chunks_positions, all_cols_found, cols_are_duplicated
 
 def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
@@ -378,18 +418,21 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
     chunks_positions_flat = [item for sublist in chunks_positions for item in sublist[:2]]
     if print_debug_main: 
         print("chunks_positions after test_extract_chunk_positions:", chunks_positions)
-        print("all_cols_found, cols_are_duplicated", all_cols_found, cols_are_duplicated)
+        print(f"all_cols_found: {all_cols_found}, cols_are_duplicated: {cols_are_duplicated}")
         print("chunks_positions_flat:", chunks_positions_flat)
     
     if not all_cols_found:
+        logger.info(f"Лист '{sheet_name}':")
+        logger.info(f"Попытка переопределения недостающих колонок...")
         chunks_positions, all_cols_found, cols_are_duplicated = try_insert_columns(fn, df_tk, 
                        chunks_positions, all_cols_found, cols_are_duplicated,
                        print_debug = print_debug, print_debug_main = print_debug_main)
         if print_debug_main: print(f"run_check_TK_02: after try_insert_columns: chunks_positions: {chunks_positions}, all_cols_found: {all_cols_found}, cols_are_duplicated: {cols_are_duplicated}")
         if all_cols_found:
-            logger.info(f"Лист '{sheet_name}':")
-            logger.info(f"Недостающие колонки переопределены")
-            
+            # logger.info(f"Лист '{sheet_name}':")
+            logger.info(f"Недостающие колонки переопределены!")
+        chunks_positions_flat = [item for sublist in chunks_positions for item in sublist[:2]]
+        
     if None in chunks_positions_flat or not all_cols_found or cols_are_duplicated: 
         if print_debug_main:
         # print(f"{fn}, {sheet_name}: Error: didn't all chunks positions find")
@@ -430,7 +473,8 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
     else: 
 
         if print_debug_main: print("chunks_positions:", chunks_positions)
-        df_chunks  = read_chunks(data_source_dir, fn, sheet_name, chunks_positions, print_debug=print_debug)
+        col_npp_name = '№ п/п'
+        df_chunks  = read_chunks(data_source_dir, fn, sheet_name, chunks_positions, print_debug=print_debug, print_debug_main= print_debug_main)
         for i, df_chunk in enumerate(df_chunks):
             if print_debug_main: print("run_check_TK: chunk:", i, "process started")
             chunk_num = i
