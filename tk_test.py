@@ -347,11 +347,14 @@ def extract_significant_cols(fn, df_tk, chunk_positions, print_debug = False, pr
     start_row_num = chunk_positions[0]-1 if chunk_positions[0]>0 else 0
     row_values = df_tk.iloc[start_row_num].values
     if print_debug_main: print(f"extract_significant_cols: row_values: {row_values}")
-    significant_col_nums = [i for i,_ in enumerate(row_values)]
+    # significant_col_nums = [i for i,v in enumerate(row_values)]
+    significant_col_nums = [i for i,v in enumerate(row_values) if not( v is  None or((type(v)==float) and np.isnan(v)))]
     significant_col_names = list(row_values)
     
     return significant_col_nums, significant_col_names
 
+# chunks_positions
+# [[39, 148, [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7], [], col_names], [150, 227, [1, 3, 4, 5, 6, 7], [1, 3, 4, 5, 6, 7], [0, 2], col_names], [229, 347, [0, 1, 2, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6], [], col_names]]
 # chunks_positions
 # [[39, 148, [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7], [], col_names], [150, 227, [1, 3, 4, 5, 6, 7], [1, 3, 4, 5, 6, 7], [0, 2], col_names], [229, 347, [0, 1, 2, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6], [], col_names]]
 def try_insert_columns(fn, df_tk, 
@@ -377,19 +380,20 @@ def try_insert_columns(fn, df_tk,
                 gt_col_nums = chunk_positions[3]
                 col_names = chunk_positions[5]
                 gt_col_nums_ideal = list(range(len(cols_chunks_02[i_chunk])))
+                start_col_num = col_nums[0]
+                start_gt_col_num = gt_col_nums[0]
                 if print_debug_main:
                     print(f"try_insert_columns: len(significant_col_nums) <> len(gt_cols_chunks[i_chunk])")
-                    print(f"try_insert_columns: col_nums: {col_nums}, gt_col_nums_ideal: {gt_col_nums_ideal}")
+                    print(f"try_insert_columns: col_nums: {col_nums}, gt_col_nums: {gt_col_nums}, gt_columns_not_found: {gt_columns_not_found}")
+                if print_debug_main:
+                    print(f"try_insert_columns: start_col_num: {start_col_num}, gt_col_nums_ideal: {gt_col_nums_ideal}")
                 if gt_col_nums[0] == 0: # найденные нужные колонки начинаются с 0, с самой первой
-                    start_col_num = col_nums[0]
-                    if print_debug_main:
-                        print(f"try_insert_columns: start_col_num: {start_col_num}, col_nums: {col_nums}, gt_col_nums_ideal: {gt_col_nums_ideal}")
+                    # start_col_num = col_nums[0]
                     i_col_cnt = 0
                     for i_col, gt_col_num_ideal in enumerate(gt_col_nums_ideal):
                         if gt_col_num_ideal in gt_columns_not_found:
                             col_nums_real.append(significant_col_nums[start_col_num + gt_col_num_ideal]) 
                             col_names_real.append(significant_col_names[start_col_num + gt_col_num_ideal]) 
-                            
                         else:
                             # print(f"i_col: {i_col}")
                             col_nums_real.append(col_nums[i_col_cnt])
@@ -401,8 +405,45 @@ def try_insert_columns(fn, df_tk,
                     chunks_positions[i_chunk][4] = []
                     chunks_positions[i_chunk][5] = col_names_real
                     all_cols_found = True
-                else:
-                    pass
+                else: # начинается не с 1-й нужной  колонки
+                    # col_nums: [1, 2, 4, 5, 6], gt_col_nums: [1, 2, 3, 4, 5], not_found_cols: [0, 6], gt_col_nums_ideal: [0, 1, 2, 3, 4, 5, 6]
+                    # сначала идем от текущей к 1-ой колонке
+                    i_col_cnt_reverse = start_gt_col_num-1
+                    for i_col, gt_col_num_ideal in enumerate(gt_col_nums_ideal[start_gt_col_num-1::-1]):
+                        i_col_reverse = start_gt_col_num -1 - i_col
+                        if gt_col_num_ideal in gt_columns_not_found:
+                            if print_debug_main: print(f"backwards: gt_col_num_ideal: {gt_col_num_ideal}, if gt_col_num_ideal in gt_columns_not_found:")
+                            # col_nums_real.insert(i_col_reverse, significant_col_nums[start_col_num - i_col_reverse + gt_col_num_ideal]) 
+                            col_nums_real.insert(0, significant_col_nums[start_col_num - i_col -1]) # + gt_col_num_ideal]) 
+                            col_names_real.insert(0, significant_col_names[start_col_num - i_col -1]) # + gt_col_num_ideal]) 
+                            
+                        else:
+                            if print_debug_main: print(f"backwards: gt_col_num_ideal: {gt_col_num_ideal}, else: if gt_col_num_ideal in gt_columns_not_found:")
+                            col_nums_real.insert(0, col_nums[i_col_cnt_reverse])
+                            col_names_real.insert(0, col_names[i_col_cnt_reverse])
+                            i_col_cnt_reverse -= 1
+                    # потом идем от текущей к последней колонке
+                    i_col_cnt = 0
+                    for i_col, gt_col_num_ideal in enumerate(gt_col_nums_ideal[start_gt_col_num::]):
+                        if gt_col_num_ideal in gt_columns_not_found:
+                            if print_debug_main: print(f"lookahead: gt_col_num_ideal: {gt_col_num_ideal}, if gt_col_num_ideal in gt_columns_not_found:")
+                            # col_nums_real.insert(i_col_reverse, significant_col_nums[start_col_num - i_col_reverse + gt_col_num_ideal]) 
+                            col_nums_real.append(significant_col_nums[start_col_num + gt_col_num_ideal - start_gt_col_num+1]) 
+                            col_names_real.append(significant_col_names[start_col_num + gt_col_num_ideal - start_gt_col_num+1]) 
+                            
+                        else:
+                            if print_debug_main: print(f"lookahead: gt_col_num_ideal: {gt_col_num_ideal}, else: if gt_col_num_ideal in gt_columns_not_found:")
+                            col_nums_real.append(col_nums[i_col_cnt])
+                            col_names_real.append(col_names[i_col_cnt])
+                            i_col_cnt += 1
+                    chunks_positions[i_chunk][2] = col_nums_real
+                    chunks_positions[i_chunk][3] = gt_col_nums_ideal
+                    chunks_positions[i_chunk][4] = []
+                    chunks_positions[i_chunk][5] = col_names_real
+                    all_cols_found = True
+    for chunk_positions in chunks_positions:
+        if len(chunk_positions[4])>0: #not_found_cols
+            all_cols_found = False
     return chunks_positions, all_cols_found, cols_are_duplicated
 
 def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
@@ -551,8 +592,6 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
     # fn_save = save_to_excel(df_chunks, total_sheet_names, path_tkbd_processed, 'test_' + fn)
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
-
-
 def run_check_TK_01a(data_source_dir, data_processed_dir, fn, sheet_name,
          tk_profile, tk_code, tk_name, patient_model,
          exit_at_not_all_cols = False,

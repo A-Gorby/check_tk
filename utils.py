@@ -833,7 +833,7 @@ def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=
             try:
                 df_chunks[i][k] = df_chunks[i][k].astype(v)
             except Exception as err:
-                print("-->", k, err)
+                print(f"read_chunks:-->", k, err)
         # df_chunks[i].reset_index()
         # df_chunks[i].columns = gt_cols_chunks[i][1:len(cols_chunks_02[i])+1]
         # display(df_chunks[i])
@@ -841,7 +841,8 @@ def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=
         # print(i, len(df_chunks[i].columns), df_chunks[i].columns)
         # print(len (gt_cols_chunks[i][1:len(cols_chunks_02[i])+1]), gt_cols_chunks[1:len(cols_chunks_02[i])])
     return df_chunks #[0], df_chunk[1], df_chunk[2]
-    
+
+
 total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
 def save_to_excel(df_total, total_sheet_names, save_path, fn):
     # fn = model + '.xlsx'
