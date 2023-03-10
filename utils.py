@@ -795,17 +795,22 @@ def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=
         df_chunk = df_chunks[i]
         if print_debug_main:
             print(f"read_chunks: chunk: {i}, df_chunk.columns: {df_chunk.columns}")
-        col_npp_name = chunk_positions[5][0]
-        if not(col_npp_name is not None or ((type (col_npp_name)==float) and np.isnan(col_npp_name))):
+        # col_npp_name = chunk_positions[5][0]
+        col_npp_name = "№ п/п"
+        if not(col_npp_name is None or ((type (col_npp_name)==float) and np.isnan(col_npp_name))):
             # next_col = list(df_chunk.columns)[list(df_chunk.columns).index('№ п/п')+1]
             next_col = list(df_chunk.columns)[list(df_chunk.columns).index(col_npp_name)+1]
             if print_debug: print("next_col:", next_col)
             # Согласовано
+            # Согласовано: 
             # df_chunk = df_chunk[~( ((df_chunk['№ п/п']=='nan') & \
             df_chunk = df_chunk[~( ((df_chunk[col_npp_name]=='nan') & \
-                        df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I ))\
-                      | df_chunk[col_npp_name].str.contains(r"Согласовано", regex=True, flags= re.I)\
-                      | df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I))] # ,case = False
+                        df_chunk[next_col].str.contains(r"Согласовано", case=False ))\
+                      | df_chunk[col_npp_name].str.contains(r"Согласовано", case=False)\
+                      | df_chunk[next_col].str.contains(r"Согласовано", case=False))] # ,case = False
+                      # df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I ))\
+                      # | df_chunk[col_npp_name].str.contains(r"Согласовано", regex=True, flags= re.I)\
+                      # | df_chunk[next_col].str.contains(r"Согласовано", regex=True, flags= re.I))] # ,case = False
             # df_chunk = df_chunk[~( (df_chunk['№ п/п'].str.contains(data_chunks[i+1],regex=True, flags= re.I) \
             #             | df_chunk['№ п/п'].str.contains(data_chunks_alter[i+1],regex=True, flags= re.I)\
             #             | df_chunk['№ п/п'].str.contains(data_chunks_alter_02[i+1],regex=True, flags= re.I)\
@@ -841,7 +846,6 @@ def read_chunks(path_tkbd_source, fn, sheet_name, chunks_positions, print_debug=
         # print(i, len(df_chunks[i].columns), df_chunks[i].columns)
         # print(len (gt_cols_chunks[i][1:len(cols_chunks_02[i])+1]), gt_cols_chunks[1:len(cols_chunks_02[i])])
     return df_chunks #[0], df_chunk[1], df_chunk[2]
-
 
 total_sheet_names = ['Услуги', 'ЛП', 'РМ' ]
 def save_to_excel(df_total, total_sheet_names, save_path, fn):
