@@ -467,6 +467,14 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
         print(f"all_cols_found: {all_cols_found}, cols_are_duplicated: {cols_are_duplicated}")
         print("chunks_positions_flat:", chunks_positions_flat)
     
+    if cols_are_duplicated:
+        sections = ['Услуги', 'ЛП', 'РМ']
+        section_cols_duplicated = []
+        for j, (_, _, col_nums, gt_col_nums, cols_not_found, col_names) in enumerate(chunks_positions):
+            if (len (col_nums) > len (cols_chunks_02[j])) or (len(gt_col_nums) > len(set(gt_col_nums))):
+                section_cols_duplicated.append(sections[j])
+        logger.error(f"Колонки задублированы в разделах: '{', '.join(section_cols_duplicated)}'")
+            
     if not all_cols_found:
         # logger.info(f"Лист '{sheet_name}':")
         logger.info(f"Попытка переопределения недостающих колонок...")
@@ -486,14 +494,8 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
             logger.error(f"Лист: {sheet_name}: Ошибка: Не найдены все разделы или все колокни разделов")
             logger.info(f"chunks_positions_flat: {chunks_positions_flat}")
             logger.info(f"all_cols_found: {all_cols_found}")
-        if cols_are_duplicated:
-            sections = ['Услуги', 'ЛП', 'РМ']
-            section_cols_duplicated = []
-            for j, (_, _, col_nums, gt_col_nums) in enumerate(chunks_positions):
-                if (len (col_nums) > len (cols_chunks_02[j])) or (len(gt_col_nums) > len(set(gt_col_nums))):
-                    section_cols_duplicated.append(sections[j])
-                    
-            logger.error(f"Колонки задублированы в разделах: '{', '.join(section_cols_duplicated)}'")
+        
+
         if chunks_positions_flat[0] is None:
             # logger.info(f"Not found chunk: Услуги")
             logger.error(f"Не найден раздел: Услуги")
@@ -605,8 +607,7 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
     # fn_save = save_to_excel(df_chunks, total_sheet_names, path_tkbd_processed, 'test_' + fn)
     # fn_save = save_to_excel(df_chunks, total_sheet_names, data_processed_dir, 'test_' + fn)
     return df_chunks
-    
-
+ 
 def run_check_TK_01a(data_source_dir, data_processed_dir, fn, sheet_name,
          tk_profile, tk_code, tk_name, patient_model,
          exit_at_not_all_cols = False,
