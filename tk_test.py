@@ -1153,6 +1153,7 @@ def run_check_by_desc_01(data_root_dir, fn_tk_desc, data_source_dir, data_proces
     return fn_save, fm_stat_save
 
 
+# from pandas.io.excel._pyxlsb import PyxlsbReader
 def run_check_by_files(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
     df_total = [None, None, None]
@@ -1162,7 +1163,8 @@ def run_check_by_files(data_source_dir, data_processed_dir,
     fn_lst = os.listdir(data_source_dir)
     k = 0
     fn_processed = []
-    for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
+    # for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
+    for i, fn in tqdm(enumerate(fn_lst[10:]), total = len(fn_lst)):
     
         if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xls' not in fn.lower(): 
             # logger.info(f"file '{fn}' not found or not xlsx-file")
@@ -1172,17 +1174,53 @@ def run_check_by_files(data_source_dir, data_processed_dir,
         tk_code = None
         tk_name = None #re.sub(r"^\d+\.", '', fn.split(' +')[0].replace('.xlsx','')).strip()
         patient_model = None
-        xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
-        xl_sheet_names = xl.sheet_names  # see all sheet names
-        # print(fn, xl_sheet_names)
+        
+        # ws.sheet_state = 'hidden'
+        fn_ext = fn.split('.')[-1].lower()
+        if fn_ext in ['xlsx', 'xlsm', 'xls']:
+            wb = load_workbook(os.path.join(data_source_dir, fn))
+            xl_sheet_names = wb.get_sheet_names()
+            xl_sheet_names = [ws_name for ws_name in xl_sheet_names if wb[ws_name].sheet_state != 'hidden']
+        elif fn_ext in ['xlsb']:
+            xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
+            # print("xl.engine:", xl.engine)
+            
+            # xl.engine == 'openpyxl'
+            # sheet.title, sheet.sheet_state
+            # print(dir(xl.book))
+            # print(xl.book.sheets)
+            # # print(xl.book._sheets)
+            # sheets = xl.book.sheets
+            # w_s = [xl.book.get_sheet(sheet) for sheet in sheets]
+            # print(w_s)
+            # print(dir(w_s[0]))
+            # xl_sheet_names = [sheet for sheet in sheets if xl.book.get_sheet(sheet).sheet_state != 'hidden']
+            
+            # xl.engine == 'xlrd'
+            # sheets = xl.book.sheets
+            # xl_sheet_names = [sheet.name for sheet in sheets if sheet.visibility]
+            
+            # xl.engine: pyxlsb - нет атрибута hidden
+            
+            xl_sheet_names = xl.sheet_names  # see all sheet names
+            # print(dir(xl))
+        else: xl_sheet_names = []
+        # # print(fn, xl_sheet_names)
         logger.info(f"Файл: '{fn}'")
         logger.info(f"Листы: {str(xl_sheet_names)}")
         fn_processed.append([fn, False])
         
         for sheet_name in xl_sheet_names:
 
+            # if fn_ext == 'xlsb':
+            #     try:
+            #         df_tk = xl.parse(sheet_name) #                _reader = pd.io.excel._pyxlsb.PyxlsbReader
+            #     except Exception as err:
+            #         print(fn, sheet_name, err)
+            # else:
+            #     df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
             df_tk = pd.read_excel(os.path.join(data_source_dir, fn), sheet_name= sheet_name)
-
+            # ExcelFile.parse
             # print(k, sheet_name)
             logger.info(f"{k}: Лист: '{sheet_name}'")
     
@@ -1251,11 +1289,14 @@ def run_check_by_files(data_source_dir, data_processed_dir,
 
         # str_date = fn_save.replace('.xlsx', '').split('_')[-4:])
         # df_stat_tk = pd.DataFrame(stat_tk, columns = ['tk_profile', 'tk_code', 'tk_name', 'fn', 'sheet_name', 'Услуги', 'ЛП', 'РМ'])
+        stat_tk_clean = [lst for lst in stat_tk if lst[-3:] != [0,0,0]]
+        # print("stat_tk:", stat_tk[:2], stat_tk_clean[:2])
+        df_stat_tk_clean = pd.DataFrame(stat_tk_clean, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
         df_stat_tk = pd.DataFrame(stat_tk, columns = head_cols + ['Услуги', 'ЛП', 'РМ'])
         df_stat_tk_files = pd.DataFrame(fn_processed, columns = ['Файл', 'Обработан'])
 
-        fm_stat_save = save_to_excel([df_stat_tk, df_stat_tk_files], 
-                      ['Shapes', 'Files'], data_processed_dir, 'tkbd_check_stat.xlsx')
+        fm_stat_save = save_to_excel([df_stat_tk_clean, df_stat_tk_files, df_stat_tk], 
+                      ['Files_Sheets', 'Files', 'Files_Sheets_all'], data_processed_dir, 'tkbd_check_stat.xlsx')
     else: 
         fn_save = None
         fm_stat_save = None
