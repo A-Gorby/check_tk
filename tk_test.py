@@ -1163,8 +1163,8 @@ def run_check_by_files(data_source_dir, data_processed_dir,
     fn_lst = os.listdir(data_source_dir)
     k = 0
     fn_processed = []
-    # for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
-    for i, fn in tqdm(enumerate(fn_lst[10:]), total = len(fn_lst)):
+    for i, fn in tqdm(enumerate(fn_lst[:]), total = len(fn_lst)):
+    # for i, fn in tqdm(enumerate(fn_lst[10:]), total = len(fn_lst)):
     
         if not os.path.isfile(os.path.join(data_source_dir, fn)) or '.xls' not in fn.lower(): 
             # logger.info(f"file '{fn}' not found or not xlsx-file")
