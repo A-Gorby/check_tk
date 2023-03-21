@@ -995,14 +995,14 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         else:
             logger.error('В описнаии нет названий листов Excel')
             sys.exit(2)
-        if 'Код' in df_tk_description.columns:
-            tk_code = row['Код']
+        if 'Код ТК' in df_tk_description.columns:
+            tk_code = row['Код ТК']
         else: tk_code = None
         if 'Профиль' in df_tk_description.columns:
             tk_profile = row['Профиль']
         else: tk_profile = None
-        if 'Наименование' in df_tk_description.columns:
-            tk_name = row['Наименование']
+        if 'Наименование ТК' in df_tk_description.columns:
+            tk_name = row['Наименование ТК']
         else: tk_name = None
         if 'Модель пациента' in df_tk_description.columns:
             patient_model = row['Модель пациента']
@@ -1016,9 +1016,11 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
         logger.info(f"Лист: {str(sheet_name)}")
         df_chunks = [None, None, None]
         try: 
-            df_chunks = run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
-                tk_code, tk_profile, tk_name, patient_model,
-                 print_debug = print_debug, print_debug_main = print_debug_main)
+            df_chunks = run_check_TK_02(
+                    data_source_dir, data_processed_dir, fn, sheet_name,
+                    # tk_code, tk_profile, tk_name, patient_model,
+                    tk_profile, tk_code, tk_name, patient_model,
+                    print_debug = print_debug, print_debug_main = print_debug_main)
         except Exception as err:
             logger.error(f"Файл '{fn}'")
             logger.error(f"Лист '{sheet_name}'")
@@ -1234,14 +1236,16 @@ def run_check_by_files(data_source_dir, data_processed_dir,
                 print(fn, sheet_name)
             df_chunks = [None, None, None]
             try:
-                df_chunks = run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
-                     tk_code, tk_profile, tk_name, patient_model,
-                     exit_at_not_all_cols=False,
-                     print_debug = print_debug, print_debug_main = print_debug_main)
+                df_chunks = run_check_TK_02(
+                            data_source_dir, data_processed_dir, fn, sheet_name,
+                            # tk_code, tk_profile, tk_name, patient_model,
+                            tk_profile, tk_code, tk_name, patient_model,
+                            exit_at_not_all_cols=False,
+                            print_debug = print_debug, print_debug_main = print_debug_main)
             except Exception as err:
                 logger.error(f"Файл '{fn}'")
                 logger.error(f"Лист '{sheet_name}'")
-                logger.error(f"Не обработан из-за ошибки: '{err}'")
+                logger.error(f"Не обработан из-за ошибки: '{str(err)}'")
                 
             # if df_chunks[0] is None : continue
             
@@ -1307,6 +1311,7 @@ def run_check_by_files(data_source_dir, data_processed_dir,
     logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
     
     return fn_save, fm_stat_save
+
 
 def run_check_by_files_01(data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = True):
