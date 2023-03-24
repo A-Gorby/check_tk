@@ -1181,9 +1181,14 @@ def run_check_by_files(data_source_dir, data_processed_dir,
         # ws.sheet_state = 'hidden'
         fn_ext = fn.split('.')[-1].lower()
         if fn_ext in ['xlsx', 'xlsm', 'xls']:
-            wb = load_workbook(os.path.join(data_source_dir, fn))
-            xl_sheet_names = wb.get_sheet_names()
-            xl_sheet_names = [ws_name for ws_name in xl_sheet_names if wb[ws_name].sheet_state != 'hidden']
+            try:
+                wb = load_workbook(os.path.join(data_source_dir, fn))
+                xl_sheet_names = wb.get_sheet_names()
+                xl_sheet_names = [ws_name for ws_name in xl_sheet_names if wb[ws_name].sheet_state != 'hidden']
+            except Exception as err:
+                logger.error(str(err))
+                xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
+                xl_sheet_names = xl.sheet_names
         elif fn_ext in ['xlsb']:
             xl = pd.ExcelFile(os.path.join(data_source_dir, fn))
             # print("xl.engine:", xl.engine)
