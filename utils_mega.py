@@ -2,7 +2,11 @@ import os, sys
 import tarfile
 from mega import Mega
 import json
-from utils_io import logger
+# from utils_io import logger
+# global logger
+from g import logger
+logger.propagate=False
+logger.info('test')
 if len(logger.handlers) > 1:
     for handler in logger.handlers:
         logger.removeHandler(handler)
