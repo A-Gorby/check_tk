@@ -48,13 +48,20 @@ from utils import print_err_messages, get_err_messages #, check_row
 
 # from utis import check_isnull, check_point_in_value, check_code_MGFOMS
 
-
+# 27.04.2023
 def check_isnull(val):
     if val is None or (type(val)==float) and np.isnan(val): return 0 #False
     return 1 #True
+def check_notnull(val):
+    if val is None or (type(val)==float) and np.isnan(val): return 0 #False
+    return 1 #True    
 def check_point_in_value(val):
     if (type(val)==str) and '.' in val: return 0 # False
     return 1
+def check_no_point_in_value(val):
+    if (type(val)==str) and '.' in val: return 0 # False
+    elif (type(val)==int) or (type(val)==float): return 1
+    else: return 0
     # return True
 def check_code_MGFOMS(val):
     try:
@@ -109,7 +116,14 @@ def check_code_rus(val):
     
     if (type(val)==str):
         for ch in val:
-            if ord(ch)>=ord('А'): return 0
+            if ord(ch)>=ord('А'): return 0  # ord('А')== 1040
+    return 1
+
+def check_code_no_rus_let(val):
+    
+    if (type(val)==str):
+        for ch in val:
+            if ord(ch)>=ord('А'): return 0  # ord('А')== 1040
     return 1
 
 def check_matching_code_804n_name_serv(val_lst):
@@ -252,14 +266,23 @@ def check_empty(val):
     return 1 #True
 
 check_functions_lst =[
-[[check_isnull], 
- [check_isnull, check_code_804n, check_code_rus],  
- [check_isnull, check_name_804n, check_LF, (check_matching_code_804n_name_serv,[1,2])], 
- [check_isnull, check_code_MGFOMS, ], #(check_matching_code_MGFOMS_name_serv, [2,3])], 
- [check_isnull, check_point_in_value, check_serv_freq_bounds, check_float_format ], 
- [check_isnull, check_point_in_value, check_multiple_serv, check_float_format], 
- [check_isnull, (check_UET1_code_MGFOMS, [3,6])],
- [check_isnull, (check_UET2_code_MGFOMS, [3,7])], ],
+# [[Не заполнено поле "№ п/п"],
+# [	Не заполнено поле 'Код услуги по приказу 804н'	'Код услуги по приказу 804н' отсутствует в справочнике	В поле 'Код услуги по приказу 804н' ошибочно указаны русские буквы	
+# Не заполнено поле 'Наименование услуги по приказу 804н'	'Наименование услуги по приказу 804н' отсутствует в справочнике	В названии услуги содержитя ошибочный символ переноса строки	
+# Указанная связка 'Код услуги по приказу 804н' и 'Наименование услуги' отсутствует в справочнике	
+# Не заполнено поле 'Код МГФОМС'	'Код МГФОМС' отсутствует в справочнике	
+# Не заполнено поле "Частота"	В поле 'Частота' стоит '.', а не ','	Частота ошибочно > 1 или <= 0 или имеет недопустимый формат числа	В поле 'Частота' недопустимый формат числа	
+# Поле 'Кратность' не заполено	В поле 'Кратность' стоит '.', а не ','	Кратность услуг ошибочно не является целым числом или имеет недопустимый формат числа	В поле 'Кратность' недопустимый формат числа	
+# Не заполнено поле 'УЕТ 1'	Связка 'УЕТ 1' и 'Код МГФОМС' отсутствует в справочнике	
+# Не заполнено поле 'УЕТ 2'	Связка 'УЕТ 2' и 'Код МГФОМС' отсутствует в справочнике    
+[[check_notnull], 
+ [check_notnull, check_code_804n, check_code_no_rus_let],  
+ [check_notnull, check_name_804n, check_LF, (check_matching_code_804n_name_serv,[1,2])], 
+ [check_notnull, check_code_MGFOMS, ], #(check_matching_code_MGFOMS_name_serv, [2,3])], 
+ [check_notnull, check_no_point_in_value, check_serv_freq_bounds, check_float_format ], 
+ [check_notnull, check_no_point_in_value, check_multiple_serv, check_float_format], 
+ [check_notnull, (check_UET1_code_MGFOMS, [3,6])],
+ [check_notnull, (check_UET2_code_MGFOMS, [3,7])], ],
 # [['Не заполнено поле "№ п/п"'],
 #  ["Не заполнено поле 'МНН'", "'МНН' отсутствует в справочнике"],
 #  ["Не заполнено поле 'Код АТХ'", "В поле 'АТХ' ошибочно указаны русские буквы", ],
@@ -273,14 +296,14 @@ check_functions_lst =[
 #  ["Не заполнено поле 'Количество'", "В поле 'Количество' стоит '.', а не ','",
 #  "В поле 'Количество' недопустимый формат числа",],
 
- [[check_isnull], 
- [check_isnull, check_MNN], 
- [check_isnull, check_code_rus], 
- [check_isnull], 
- [check_isnull, check_point_in_value, check_serv_freq_bounds, check_float_format], 
- [check_isnull, check_point_in_value, check_multiple_LP, check_float_format], 
- [check_isnull], 
- [check_isnull, check_point_in_value, check_float_format],  ],
+ [[check_notnull], 
+ [check_notnull, check_MNN], 
+ [check_notnull, check_code_no_rus_let], 
+ [check_notnull], 
+ [check_notnull, check_no_point_in_value, check_serv_freq_bounds, check_float_format], 
+ [check_notnull, check_no_point_in_value, check_multiple_LP, check_float_format], 
+ [check_notnull], 
+ [check_notnull, check_no_point_in_value, check_float_format],  ],
 
 # [['Не заполнено поле "№ п/п"'],
 #  ['Не заполнено поле "Наименование МИ/РМ"', "'МИ' отсутствует в справочнике"],
@@ -297,15 +320,273 @@ check_functions_lst =[
 #  "В поле 'Количество' недопустимый формат числа",],
 # ]    
     
-[[check_isnull], 
- [check_isnull, check_RM_name], 
- [check_isnull, check_RM_code], 
- [check_isnull, check_point_in_value, check_serv_freq_bounds, check_float_format], 
- [check_isnull, check_point_in_value, check_multiple_RM, check_float_format], 
- [check_isnull], 
- [check_isnull, check_point_in_value, check_float_format],  ],
+[[check_notnull], 
+ [check_notnull, check_RM_name], 
+ [check_notnull, check_RM_code], 
+ [check_notnull, check_no_point_in_value, check_serv_freq_bounds, check_float_format], 
+ [check_notnull, check_no_point_in_value, check_multiple_RM, check_float_format], 
+ [check_notnull], 
+ [check_notnull, check_no_point_in_value, check_float_format],  ],
     
 ]
+
+# def check_isnull(val):
+#     if val is None or (type(val)==float) and np.isnan(val): return 0 #False
+#     return 1 #True
+# def check_point_in_value(val):
+#     if (type(val)==str) and '.' in val: return 0 # False
+#     return 1
+#     # return True
+# def check_code_MGFOMS(val):
+#     try:
+#         if df_services_MGFOMS.query(f"code == '{val}'").shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         # как вариант ValueError: multi-line expressions are only valid in the context of data, use DataFrame.eval
+#         return 0
+
+# def check_code_804n(val):
+#     # print(f"check_code_804n: {type(val)}, val: {val}") 
+#     try:
+#         if df_services_804n.query(f"code == '{val}'").shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         # try:
+#         #     if df_services_804n.query(f"code == '''{val}'''", engine='python').shape[0] >0: 
+#         #         return 1
+#         #     else: return 0
+#         # except:
+#         return 0
+        
+# def check_name_804n(val):
+#     # print(f"check_code_804n: {type(val)}, val: {val}") 
+#     try:
+#         if df_services_804n.query(f"name == '{val}'").shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         # try:
+#         # print(f"check_name_804n: val: {val}")
+#         # if df_services_804n.query(f"name == '''{val}'''", engine='python').shape[0] >0: 
+#         #     return 1
+#         # else: return 0
+#         # except:
+#         return 0
+# def check_LF(val):    
+#     if (type(val)==str):
+#         if '\n' in val:
+#             return 0
+#         else: return 1
+#     return 1
+
+# def check_rus_char(val):
+#     if (type(val)==str):
+#         for ch in val:
+#             if ord(ch)>=ord('А'): return 1 #True
+#     return 0 #False
+# def check_code_rus(val):
+    
+#     if (type(val)==str):
+#         for ch in val:
+#             if ord(ch)>=ord('А'): return 0
+#     return 1
+
+# def check_matching_code_804n_name_serv(val_lst):
+#     code, name = val_lst
+#     try:
+#         if df_services_804n.query(f"code == '{code}' & name =='{name}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_matching_code_MGFOMS_name_serv(val_lst):
+#     code, name = val_lst
+#     try:
+#         if df_services_MGFOMS.query(f"code == '{code}' & name =='{name}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_UET1_code_MGFOMS(val_lst):
+#     code_MGFOMS, uet1 = val_lst
+#     try:
+#         if df_services_MGFOMS.query(f"code == '{code_MGFOMS}' & UET1 =={uet1}" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_UET2_code_MGFOMS(val_lst):
+#     code_MGFOMS, uet2 = val_lst
+#     try:
+#         if df_services_MGFOMS.query(f"code == '{code_MGFOMS}' & UET2 =={uet2}" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_serv_freq_bounds(val):
+#     # print("check_serv_freq_bounds:", type(val))
+#     if (type(val)==float) or (type(val) ==int):
+#         if (val > 0) and (val <= 1):
+#             return 1
+#         else: return 0
+#     elif type(val)==str:
+#         try:
+#             # prnt("try")
+#             val_f = float(val)
+#             if (val_f > 0) and (val_f <= 1):
+#                 return 1
+#             else: return 0
+#         except:
+#             # print("except")
+#             return 0
+            
+#     return 0
+# def check_float_format (val):
+#     try:
+#         _ = float(val)
+#         return 1
+#     except:
+#         return 0
+# def check_multiple_serv(val):
+#     # проверка кратности Услуг
+#     try:
+#         val_f= float(val)
+#         if (val_f >= 1) and (val_f.is_integer()):
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_multiple_LP(val):
+#     # проверка кратности ЛП
+#     try:
+#         val_f = float(val)
+#         if (val_f >= 1):
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+    
+# def check_MNN(val):
+#     try:
+#         if df_MNN.query(f"mnn_standard == '{val}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_RM_name (val):
+#     # df_mi_org_gos, df_mi_national
+#     try:
+#         if df_mi_org_gos.query(f"name_clean == '{val}'" ).shape[0] >0: 
+#             return 1
+#         elif df_mi_national.query(f"name == '{val}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_RM_name_old (val):
+#     try:
+#         if df_RM.query(f"name == '{val}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+    
+# def check_RM_code(val):
+#     # df_mi_org_gos, df_mi_national
+#     try:
+#         if df_mi_org_gos.query(f"kind == '{val}'" ).shape[0] >0: 
+#             return 1
+#         elif df_mi_national.query(f"code == '{val}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except: return 0
+    
+
+# def check_RM_code_old(val):
+#     try:
+#         if df_RM.query(f"code == '{val}'" ).shape[0] >0: 
+#             return 1
+#         else: return 0
+#     except: return 0
+
+# def check_multiple_RM(val):
+#     # проверка кратности МИ/РМ
+#     try:
+#         val_f = float(val)
+#         if (val_f <= 1) and (val_f > 0):
+#             return 1
+#         else: return 0
+#     except:
+#         return 0
+
+# def check_empty(val):
+#     if val is None or (type(val)==float) and np.isnan(val): return 0 #False
+#     return 1 #True
+
+# check_functions_lst =[
+# [[check_isnull], 
+#  [check_isnull, check_code_804n, check_code_rus],  
+#  [check_isnull, check_name_804n, check_LF, (check_matching_code_804n_name_serv,[1,2])], 
+#  [check_isnull, check_code_MGFOMS, ], #(check_matching_code_MGFOMS_name_serv, [2,3])], 
+#  [check_isnull, check_point_in_value, check_serv_freq_bounds, check_float_format ], 
+#  [check_isnull, check_point_in_value, check_multiple_serv, check_float_format], 
+#  [check_isnull, (check_UET1_code_MGFOMS, [3,6])],
+#  [check_isnull, (check_UET2_code_MGFOMS, [3,7])], ],
+# # [['Не заполнено поле "№ п/п"'],
+# #  ["Не заполнено поле 'МНН'", "'МНН' отсутствует в справочнике"],
+# #  ["Не заполнено поле 'Код АТХ'", "В поле 'АТХ' ошибочно указаны русские буквы", ],
+# #  ["Не заполнено поле 'Форма выпуска ЛП'"],
+# #  ["Не заполнено поле 'Частота'",  "В поле 'Частота' стоит '.', а не ','",
+# #   'Частота > 1 или <= 0 или имеет недопустимый формат числа', 
+#     # "В поле 'Частота' недопустимый формат числа",],
+# #  ["Не заполнено поле 'Кратность'",  "В поле 'Кратность' стоит '.', а не ','",
+# #  "Кратность ошибочно < 1 или имеет недопустимый формат числа", "В поле 'Кратность' недопустимый формат числа",],
+# #  ["Не заполнено поле 'Единица измерения'",], # 'Ошибка в записе единиц измерения',],
+# #  ["Не заполнено поле 'Количество'", "В поле 'Количество' стоит '.', а не ','",
+# #  "В поле 'Количество' недопустимый формат числа",],
+
+#  [[check_isnull], 
+#  [check_isnull, check_MNN], 
+#  [check_isnull, check_code_rus], 
+#  [check_isnull], 
+#  [check_isnull, check_point_in_value, check_serv_freq_bounds, check_float_format], 
+#  [check_isnull, check_point_in_value, check_multiple_LP, check_float_format], 
+#  [check_isnull], 
+#  [check_isnull, check_point_in_value, check_float_format],  ],
+
+# # [['Не заполнено поле "№ п/п"'],
+# #  ['Не заполнено поле "Наименование МИ/РМ"', "'МИ' отсутствует в справочнике"],
+# #  ['Не заполнено поле "Код МИ/РМ"', "'Код МИ' отсутствует в справочнике"],
+# #  ["Не заполнено поле 'Частота'", "В поле 'Частота' стоит '.', а не ','", 
+# #  'Частота > 1 или <= 0 или имеет недопустимый формат числа',
+# #   "В поле 'Частота' недопустимый формат числа",],
+# #  ["Не заполнено поле 'Кратность'",  "В поле 'Кратность' стоит '.', а не ','",
+# #  # "Кратность ошибочно < 1 или имеет недопустимый формат числа", 
+# #   "Кратность ошибочно > 1 или имеет недопустимый формат числа", 
+# #   "В поле 'Кратность' недопустимый формат числа",],
+# #   ["Не заполнено поле 'Единица измерения'",], 
+# #  ["Не заполнено поле 'Количество'", "В поле 'Количество' стоит '.', а не ','",
+# #  "В поле 'Количество' недопустимый формат числа",],
+# # ]    
+    
+# [[check_isnull], 
+#  [check_isnull, check_RM_name], 
+#  [check_isnull, check_RM_code], 
+#  [check_isnull, check_point_in_value, check_serv_freq_bounds, check_float_format], 
+#  [check_isnull, check_point_in_value, check_multiple_RM, check_float_format], 
+#  [check_isnull], 
+#  [check_isnull, check_point_in_value, check_float_format],  ],
+    
+# ]
 
 
 
@@ -1525,6 +1806,8 @@ def parse_opt():
         help="Xlsx descrition TK file  (file_nmae, TK_name, TK_code, sheet_name)' in data root dir, default None")
     parser.add_argument('--supp_dict_dir', '-dd', type=str, default='./data/supp_dict/',
         help="Directory for support dictionaries, default  './data/supp_dict/'")
+    parser.add_argument('--fn_smnn_pickle', '-fsmnn', type=str, default=None,
+        help="Name of SMNN pickle-file ESKLP in support dictionaries, default  './data/supp_dict/'")
             
     opt = parser.parse_args()
     return opt
@@ -1534,6 +1817,7 @@ def main (data_source_dir = './data/source/',
     data_root_dir = None, #'./data/',
     xlsx_description = None, 
     supp_dict_dir = './data/supp_dict/',
+    fn_smnn_pickle = None,
     ):
     # global smnn_list_df, klp_list_dict_df, zvnlp_df, znvlp_date, znvlp_date_format, esklp_date_format #esklp_date
     global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
@@ -1543,7 +1827,8 @@ def main (data_source_dir = './data/source/',
     # supp_dict_dir =  'D:/DPP/02_TKBD/data/supp_dict/source/'
     # load_check_dictionaries(os.path.join(data_root_dir,'supp_dict'))
     # df_services_MGFOMS, df_services_804n, df_RM, df_MNN = load_check_dictionaries(supp_dict_dir)
-    df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national = load_check_dictionaries(supp_dict_dir)
+    # df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national = load_check_dictionaries(supp_dict_dir)
+    df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national = load_check_dictionaries(supp_dict_dir, fn_smnn_pickle)
 
     if xlsx_description is None:
         # run_check_by_files(data_source_dir, data_processed_dir)
