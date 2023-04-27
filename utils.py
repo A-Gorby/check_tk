@@ -38,7 +38,7 @@ from manual_dictionaries import err_msg_lst
 
 # from tk_test import check_functions_lst
 
-def load_check_dictionaries(path_supp_dicts):
+def load_check_dictionaries(path_supp_dicts, fn_smnn_pickle):
     global df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
     # if not os.path.exists(supp_dict_dir):
     #     os.path.mkdir(supp_dict_dir)
@@ -78,12 +78,14 @@ def load_check_dictionaries(path_supp_dicts):
 
     fn = 'МНН.xlsx'
     sheet_name = 'Sheet1'
-    df_MNN = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
-    df_MNN.rename (columns = {'МНН': 'mnn_standard', 
-                          'Торговое наименование лекарственного препарата': 'trade_name',
-                          'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
-                         },
-               inplace=True)
+    # df_MNN = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
+    # df_MNN.rename (columns = {'МНН': 'mnn_standard', 
+    #                       'Торговое наименование лекарственного препарата': 'trade_name',
+    #                       'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
+    #                      },
+    #            inplace=True)
+    df_MNN = restore_df_from_pickle(path_supp_dicts, fn_smnn_pickle)
+    
     # print("df_MNN", df_MNN.shape, df_MNN.columns)
     logger.info(f"Загружен справочник {fn}: {str(df_MNN.shape)}")
     return df_services_MGFOMS, df_services_804n, df_RM, df_MNN, df_mi_org_gos, df_mi_national
@@ -869,6 +871,20 @@ def save_to_excel(df_total, total_sheet_names, save_path, fn):
         for i, df in enumerate(df_total):
             df.to_excel(writer, sheet_name = total_sheet_names[i], index=False)
     return fn_date    
+
+def save_df_lst_to_excel(df_total, total_sheet_names, save_path, fn):
+    # fn = model + '.xlsx'
+    offset = datetime.timezone(datetime.timedelta(hours=3))
+    dt = datetime.datetime.now(offset)
+    str_date = dt.strftime("%Y_%m_%d_%H%M")
+    fn_date = fn.replace('.xlsx','')  + '_' + str_date + '.xlsx'
+    
+    # with pd.ExcelWriter(os.path.join(path_tkbd_processed, fn_date )) as writer:  
+    with pd.ExcelWriter(os.path.join(save_path, fn_date )) as writer:  
+        
+        for i, df in enumerate(df_total):
+            df.to_excel(writer, sheet_name = total_sheet_names[i], index=False)
+    return fn_date        
 
 def get_humanize_filesize(path, fn):
     human_file_size = None
