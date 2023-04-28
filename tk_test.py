@@ -206,9 +206,19 @@ def check_multiple_LP(val):
     except:
         return 0
     
-def check_MNN(val):
+def check_MNN_old(val):
     try:
         if df_MNN.query(f"mnn_standard == '{val}'" ).shape[0] >0: 
+        #if df_MNN[df_MNN["mnn_standard"].str.contains(val, case=False, regex=False)].shape[0] >0: 
+            return 1
+        else: return 0
+    except:
+        return 0
+
+def check_MNN(val):
+    try:
+        # if df_MNN.query(f"mnn_standard == '{val}'" ).shape[0] >0: 
+        if df_MNN[df_MNN["mnn_standard"].str.contains(val, case=False, regex=False)].shape[0] >0: 
             return 1
         else: return 0
     except:

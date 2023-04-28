@@ -80,10 +80,10 @@ def load_check_dictionaries(path_supp_dicts, fn_smnn_pickle):
     sheet_name = 'Sheet1'
     # df_MNN = pd.read_excel(os.path.join(path_supp_dicts, fn), sheet_name = sheet_name)
     # df_MNN.rename (columns = {'МНН': 'mnn_standard', 
-    #                       'Торговое наименование лекарственного препарата': 'trade_name',
-    #                       'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
-    #                      },
-    #            inplace=True)
+    #                        'Торговое наименование лекарственного препарата': 'trade_name',
+    #                        'Лекарственная форма, дозировка, упаковка (полная)': 'pharm_form',
+    #                       },
+    #             inplace=True)
     df_MNN = restore_df_from_pickle(path_supp_dicts, fn_smnn_pickle)
     
     # print("df_MNN", df_MNN.shape, df_MNN.columns)
