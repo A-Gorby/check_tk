@@ -178,8 +178,22 @@ def np_unique_nan(lst: np.array, debug = False)->np.array: # a la version 2.4
     if debug: print(f"np_unique_nan: return: type(lst_unique): {type(lst_unique)}")
     return lst_unique
 
-
 def find_rec_pd(df, srch_str, print_debug=False):
+    rec_num = None
+    for i, row in df.iterrows():
+        row_values_rejoin = [' '.join((' '.join(v.split())).split('\n')) for v in row.values if type(v)==str]
+        rejoin_col = ' '.join((' '.join(srch_str.split())).split('\n'))
+        # if srch_str in row_values_rejoin:
+        srch_str_found_lst = [srch_str in v for v in row_values_rejoin ]
+        if True in srch_str_found_lst:
+            if print_debug: print('found:', srch_str)
+            # print(i)
+            return i
+    if print_debug: print('not found:', srch_str)
+    return rec_num
+
+
+def find_rec_pd_00(df, srch_str, print_debug=False):
     rec_num = None
     for i, row in df.iterrows():
         row_values_rejoin = [' '.join((' '.join(v.split())).split('\n')) for v in row.values if type(v)==str]
@@ -557,7 +571,7 @@ def test_extract_chunk_positions_02(file_name, df_tk, print_debug = False, print
     # all_cols_found = [True, True, True] # по коли-ву обрбатываемых сейчас чанков
     all_cols_found = True
     cols_are_duplicated = False
-    for j in range(6): # на всякий случай бывает что не бывает лечнбного питания лиеты после МИ 
+    for j in range(6): # на всякий случай бывает что не бывает лечебного питания диеты после МИ 
         # проверяем наличие заголовков других блоков данных
         if print_debug: 
             print("chunk:", j)

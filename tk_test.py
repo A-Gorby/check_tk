@@ -796,11 +796,11 @@ def run_check_TK_02(data_source_dir, data_processed_dir, fn, sheet_name,
         if chunks_positions_flat[2] is None:
             logger.error(f"Не найден раздел: ЛП")
         if chunks_positions_flat[3] is None:
-            logger.error(f"Не найден завершение раздела: ЛП")
+            logger.error(f"Не найдено завершение раздела: ЛП")
         if chunks_positions_flat[4] is None:
             logger.error(f"Не найден раздел: МИ/РМ")
         if chunks_positions_flat[5] is None:
-            logger.error(f"Не найден завершение раздела: МИ/РМ")
+            logger.error(f"Не найдено завершение раздела: МИ/РМ")
         
         if exit_at_not_all_cols:
             logger.info("Обработка завершена")
@@ -940,11 +940,11 @@ def run_check_TK_01a(data_source_dir, data_processed_dir, fn, sheet_name,
         if chunks_positions_flat[2] is None:
             logger.info(f"Не найден раздел: ЛП")
         if chunks_positions_flat[3] is None:
-            logger.info(f"Не найден завершение раздела: ЛП")
+            logger.info(f"Не найдено завершение раздела: ЛП")
         if chunks_positions_flat[4] is None:
             logger.info(f"Не найден раздел: МИ/РМ")
         if chunks_positions_flat[5] is None:
-            logger.info(f"Не найден завершение раздела: МИ/РМ")
+            logger.info(f"Не найдено завершение раздела: МИ/РМ")
         
         if exit_at_not_all_cols:
             logger.info("Обработка завершена")
@@ -1075,11 +1075,11 @@ def run_check_TK_01(data_source_dir, data_processed_dir, fn, sheet_name,
         if chunks_positions_flat[2] is None:
             logger.info(f"Не найден раздел: ЛП")
         if chunks_positions_flat[3] is None:
-            logger.info(f"Не найден завершение раздела: ЛП")
+            logger.info(f"Не найдено завершение раздела: ЛП")
         if chunks_positions_flat[4] is None:
             logger.info(f"Не найден раздел: МИ/РМ")
         if chunks_positions_flat[5] is None:
-            logger.info(f"Не найден завершение раздела: МИ/РМ")
+            logger.info(f"Не найдено завершение раздела: МИ/РМ")
         
         if exit_at_not_all_cols:
             logger.info("Обработка завершена")
@@ -1356,13 +1356,15 @@ def run_check_by_desc(data_root_dir, fn_tk_desc, data_source_dir, data_processed
 
         fm_stat_save = save_to_excel([df_stat_tk, df_stat_tk_files], 
                       ['Shapes', 'Files'], data_processed_dir, 'tkbd_check_stat.xlsx')
+        # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+        # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+        logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
+        logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
     else: 
         fn_save = None
         fm_stat_save = None
-    # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
-    # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
-    logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
-    logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
+        logger.info(f"Файлы проверки и статистики не созданы из-зв отсуствия обработанных данных")
+    
     
     return fn_save, fm_stat_save
 
@@ -1598,13 +1600,15 @@ def run_check_by_files(data_source_dir, data_processed_dir,
 
         fm_stat_save = save_to_excel([df_stat_tk_clean, df_stat_tk_files, df_stat_tk], 
                       ['Files_Sheets', 'Files', 'Files_Sheets_all'], data_processed_dir, 'tkbd_check_stat.xlsx')
+        # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
+        # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
+        logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
+        logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
     else: 
         fn_save = None
         fm_stat_save = None
-    # logger.info(f"Check file '{fn_save}' saved in '{data_processed_dir}'")
-    # logger.info(f"Check stat file '{fm_stat_save}' saved in '{data_processed_dir}'")
-    logger.info(f"Файл проверки '{fn_save}' сохранен в '{data_processed_dir}'")
-    logger.info(f"Файл статистики обработки '{fm_stat_save}' сохранен в '{data_processed_dir}'")
+        logger.info(f"Файлы проверки и статистики не созданы из-зв отсуствия обработанных данных")
+    
     
     return fn_save, fm_stat_save
 
@@ -1690,6 +1694,9 @@ def run_check_by_files_01(data_source_dir, data_processed_dir,
 
 
 def add_check_comments(path_tkbd_processed, fn_save):
+    if fn_save is None:
+        logger.info(f"Файл с коментариями не создан из-зв отсуствия обработанных данных")
+        return 
     wb = load_workbook(os.path.join(path_tkbd_processed, fn_save))
     cols_wdth_lst = [[5,20,70,10,15,15,10,10], [5,20,15,25,15,15,10,10], [5,70,15,15,15,15,10,10]]
     desc_cols_num = 6 # Кол-во колонок перед: Профиль Код Наименование ТК Модель пациента Файл Лист
@@ -1843,7 +1850,9 @@ def main (data_source_dir = './data/source/',
     if xlsx_description is None:
         # run_check_by_files(data_source_dir, data_processed_dir)
         fn_save, fm_stat_save = run_check_by_files(data_source_dir, data_processed_dir,
-                     print_debug = False, print_debug_main = False) #True)
+                     print_debug = False, 
+                     print_debug_main = False)
+                     # print_debug_main = True)
     else: # run_check_by_desc(data_source_dir, data_processed_dir, data_root_dir, xlsx_description)
         fn_save, fm_stat_save = run_check_by_desc(data_root_dir, xlsx_description, data_source_dir, data_processed_dir,
                      print_debug = False, print_debug_main = False) #True)
